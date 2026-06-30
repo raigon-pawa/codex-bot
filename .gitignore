@@ -70,6 +70,21 @@ web_modules/
 .env.*
 !.env.example
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.python-version
+
+# Codex bot data
+*.db
+*.sqlite3
+data/
+logs/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

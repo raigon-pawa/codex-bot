@@ -1,0 +1,8 @@
+# ── Core ──────────────────────────────────────────────────
+discord.py>=2.7,<3
+python-dotenv>=1.0
+aiosqlite>=0.20
+
+# ── Optional: AI assistance cog (Claude / Anthropic) ──────
+# Uncomment to enable the /ask & /summarize commands.
+anthropic>=0.40

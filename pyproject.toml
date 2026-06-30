@@ -1,0 +1,15 @@
+# Tooling configuration for Codex. Runtime dependencies live in requirements.txt;
+# this file only configures the linter (ruff) and test runner (pytest).
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/W: pycodestyle · F: pyflakes · I: isort · UP: pyupgrade
+# B: bugbear · SIM: simplify · RUF: ruff-native
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
