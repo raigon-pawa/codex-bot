@@ -7,9 +7,15 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
-- `ai` cog — Claude-powered `/ask` and `/summarize`, built on the async Anthropic
-  client with per-user cooldowns. Model configurable via `AI_MODEL` (defaults to
-  `claude-opus-4-8`).
+- `ai` cog — Claude-powered `/ask`, `/chat`, `/summarize`, built on the async
+  Anthropic client with per-user cooldowns.
+- `/chat` — multi-turn conversation with memory and **prompt caching** on the
+  growing history (re-read at ~0.1× input cost once it passes the model minimum);
+  `/endchat` clears a conversation. Per-reply token usage shown in the footer.
+
+### Changed
+- Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise
+  cost; set `AI_MODEL=claude-opus-4-8` for top quality.
 - Docker self-hosting: `Dockerfile`, hardened `docker-compose.yml`, and a
   "Self-hosting with Docker" guide in the README.
 
