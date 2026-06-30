@@ -66,6 +66,8 @@ class Social(commands.Cog):
             await db.commit()
 
         if leveled_up:
+            # Let other cogs (e.g. roles) react to milestones.
+            self.bot.dispatch("level_up", message.author, level)
             await message.channel.send(
                 f"🎉 {message.author.mention} reached **level {level}**!", delete_after=15
             )

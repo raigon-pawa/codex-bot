@@ -43,6 +43,20 @@ CREATE TABLE IF NOT EXISTS flashcards (
     back       TEXT    NOT NULL,
     created_at REAL    NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS self_roles (
+    guild_id INTEGER NOT NULL,
+    role_id  INTEGER NOT NULL,
+    emoji    TEXT,
+    PRIMARY KEY (guild_id, role_id)
+);
+
+CREATE TABLE IF NOT EXISTS level_roles (
+    guild_id INTEGER NOT NULL,
+    level    INTEGER NOT NULL,
+    role_id  INTEGER NOT NULL,
+    PRIMARY KEY (guild_id, level)
+);
 """
 
 
