@@ -1,0 +1,34 @@
+name: 🐛 Bug report
+description: Something in Codex isn't working as expected.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including which command or cog.
+      placeholder: Running /rank throws an error when the user has no XP yet.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `/...`
+        2. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Paste the traceback from the console. **Redact any tokens.**
+      render: shell
+  - type: input
+    id: versions
+    attributes:
+      label: Environment
+      placeholder: "Python 3.14, discord.py 2.7.1, OS Linux"
+    validations:
+      required: true

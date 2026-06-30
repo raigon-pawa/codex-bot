@@ -1,0 +1,32 @@
+name: ✨ Feature request
+description: Suggest a new cog, command, or improvement for Codex.
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area
+      options:
+        - Study tools
+        - AI assistance
+        - Gaming utilities
+        - Social features
+        - Moderation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: As a study-group member, I want timed focus sessions so that...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch the command(s) and behaviour you have in mind.
+      placeholder: "/pomodoro <minutes> — starts a focus timer and pings me on break."
+    validations:
+      required: true
