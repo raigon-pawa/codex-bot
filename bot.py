@@ -23,6 +23,7 @@ INITIAL_EXTENSIONS = (
     "cogs.components",
     "cogs.social",
     "cogs.ai",
+    "cogs.study",
 )
 
 

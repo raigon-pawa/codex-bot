@@ -22,6 +22,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `components`   | Buttons, select menus, modals, **and** user/message context menus           |
 | `social`       | XP & levels with SQLite persistence (`/rank`, `/leaderboard`)               |
 | `ai`           | Claude `/ask`, `/chat` (cached multi-turn memory), `/summarize`              |
+| `study`        | `/pomodoro`, `/remindme` (SQLite-backed), `/flashcards` deck                 |
 
 11 slash commands + 2 context menus, all verified to load.
 
@@ -158,8 +159,8 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | Persistence (SQLite)                    | `core/database`, `social`                          | ✅ |
 | **AI assistance** (Claude)              | `ai` — `/ask`, `/chat`, `/summarize`               | ✅ |
 | **Prompt caching** (cost saving)        | `ai` — `/chat` caches conversation history          | ✅ |
-| Study tools                             | `study` — pomodoro, reminders, flashcards         | 🔜 |
-| **Reminders / scheduled tasks**         | `study` (via `discord.ext.tasks` loop)            | 🔜 |
+| Study tools                             | `study` — pomodoro, reminders, flashcards         | ✅ |
+| **Reminders / scheduled tasks**         | `study` (via `discord.ext.tasks` loop)            | ✅ |
 | **Polls** (native Discord polls)        | `gaming`/`social`                                  | 🔜 |
 | Gaming utilities                        | `gaming` — dice, trivia, LFG, tournaments         | 🔜 |
 | **Reaction roles** / self-assign roles  | `roles`                                            | 🔜 |
