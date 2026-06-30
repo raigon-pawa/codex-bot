@@ -13,3 +13,4 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["."]  # so `import bot` works under bare `pytest` (CI runs it this way)
