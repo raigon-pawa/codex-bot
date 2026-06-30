@@ -16,6 +16,10 @@ All notable changes to Codex are documented here. The format is based on
 - `study` cog — `/pomodoro start|stop` focus timers, `/remindme` + `/reminders`
   (SQLite-backed, dispatched by a background task loop so they survive restarts),
   and a per-server `/flashcards add|review|list|delete` deck.
+- `roles` cog — `/selfrole add|remove|panel` button self-assign roles (persistent
+  via a `DynamicItem`, so panels survive restarts) and `/levelrole set|remove|list`
+  that auto-grants roles at XP milestones (driven by a new `level_up` event from
+  the `social` cog).
 
 ### Changed
 - Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise

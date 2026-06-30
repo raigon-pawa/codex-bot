@@ -24,6 +24,7 @@ INITIAL_EXTENSIONS = (
     "cogs.social",
     "cogs.ai",
     "cogs.study",
+    "cogs.roles",
 )
 
 

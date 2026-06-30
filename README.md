@@ -23,6 +23,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `social`       | XP & levels with SQLite persistence (`/rank`, `/leaderboard`)               |
 | `ai`           | Claude `/ask`, `/chat` (cached multi-turn memory), `/summarize`              |
 | `study`        | `/pomodoro`, `/remindme` (SQLite-backed), `/flashcards` deck                 |
+| `roles`        | Button self-assign roles (persistent) + auto level-up roles                  |
 
 11 slash commands + 2 context menus, all verified to load.
 
@@ -163,7 +164,7 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | **Reminders / scheduled tasks**         | `study` (via `discord.ext.tasks` loop)            | ✅ |
 | **Polls** (native Discord polls)        | `gaming`/`social`                                  | 🔜 |
 | Gaming utilities                        | `gaming` — dice, trivia, LFG, tournaments         | 🔜 |
-| **Reaction roles** / self-assign roles  | `roles`                                            | 🔜 |
+| **Reaction roles** / self-assign roles  | `roles` — button panel + auto level roles          | ✅ |
 | **Voice / music**                       | `music` (needs FFmpeg + a voice source)           | 🔜 |
 | **Scheduled Events** (study sessions)   | `events` extension                                 | 🔜 |
 | **AutoMod** rule management             | `automod`                                          | 🔜 |
