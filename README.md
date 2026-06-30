@@ -24,6 +24,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `ai`           | Claude `/ask`, `/chat` (cached multi-turn memory), `/summarize`              |
 | `study`        | `/pomodoro`, `/remindme` (SQLite-backed), `/flashcards` deck                 |
 | `roles`        | Button self-assign roles (persistent) + auto level-up roles                  |
+| `gaming`       | Native `/poll`, `/roll` dice, `/trivia`, `/lfg` board                        |
 
 11 slash commands + 2 context menus, all verified to load.
 
@@ -162,8 +163,8 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | **Prompt caching** (cost saving)        | `ai` — `/chat` caches conversation history          | ✅ |
 | Study tools                             | `study` — pomodoro, reminders, flashcards         | ✅ |
 | **Reminders / scheduled tasks**         | `study` (via `discord.ext.tasks` loop)            | ✅ |
-| **Polls** (native Discord polls)        | `gaming`/`social`                                  | 🔜 |
-| Gaming utilities                        | `gaming` — dice, trivia, LFG, tournaments         | 🔜 |
+| **Polls** (native Discord polls)        | `gaming` — `/poll`                                 | ✅ |
+| Gaming utilities                        | `gaming` — dice, trivia, LFG                        | ✅ |
 | **Reaction roles** / self-assign roles  | `roles` — button panel + auto level roles          | ✅ |
 | **Voice / music**                       | `music` (needs FFmpeg + a voice source)           | 🔜 |
 | **Scheduled Events** (study sessions)   | `events` extension                                 | 🔜 |

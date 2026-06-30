@@ -20,6 +20,9 @@ All notable changes to Codex are documented here. The format is based on
   via a `DynamicItem`, so panels survive restarts) and `/levelrole set|remove|list`
   that auto-grants roles at XP milestones (driven by a new `level_up` event from
   the `social` cog).
+- `gaming` cog — native `/poll`, a `/roll` dice roller (NdM±K notation), `/trivia`
+  (Open Trivia DB, multiple-choice answer buttons), and an `/lfg` board with
+  Join/Leave buttons.
 
 ### Changed
 - Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise
