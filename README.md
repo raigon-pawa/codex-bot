@@ -21,6 +21,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `moderation`   | Permission-gated commands (`/kick`, `/ban`, `/timeout`, `/clear`)           |
 | `components`   | Buttons, select menus, modals, **and** user/message context menus           |
 | `social`       | XP & levels with SQLite persistence (`/rank`, `/leaderboard`)               |
+| `ai`           | Claude-powered `/ask` & `/summarize` (async Anthropic client)               |
 
 11 slash commands + 2 context menus, all verified to load.
 
@@ -155,7 +156,7 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | **Permissions** & default-perms gating  | `moderation`                                       | ✅ |
 | **Timeouts** (communication disabled)   | `moderation`                                       | ✅ |
 | Persistence (SQLite)                    | `core/database`, `social`                          | ✅ |
-| **AI assistance** (Claude)              | `ai` — `/ask`, `/summarize`, thread chat          | 🔜 |
+| **AI assistance** (Claude)              | `ai` — `/ask`, `/summarize`                        | ✅ |
 | Study tools                             | `study` — pomodoro, reminders, flashcards         | 🔜 |
 | **Reminders / scheduled tasks**         | `study` (via `discord.ext.tasks` loop)            | 🔜 |
 | **Polls** (native Discord polls)        | `gaming`/`social`                                  | 🔜 |

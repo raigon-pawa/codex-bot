@@ -33,6 +33,10 @@ APPLICATION_ID: int = int(_require("APPLICATION_ID"))
 # ── Optional ──────────────────────────────────────────────
 DEV_GUILD_ID: int | None = _optional_int("DEV_GUILD_ID")
 ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
+# Claude model for the AI cog. Default is the most capable Opus tier; set
+# AI_MODEL=claude-haiku-4-5 (~5x cheaper) or claude-sonnet-4-6 for high traffic.
+AI_MODEL: str = os.getenv("AI_MODEL", "claude-opus-4-8")
+AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", "1024"))
 PREFIX: str = os.getenv("PREFIX", "!")
 OWNER_IDS: set[int] = {int(x) for x in os.getenv("OWNER_IDS", "").split(",") if x.strip()}
 DB_PATH: str = os.getenv("DB_PATH", "data/codex.db")

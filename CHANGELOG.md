@@ -6,7 +6,12 @@ All notable changes to Codex are documented here. The format is based on
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- `ai` cog — Claude-powered `/ask` and `/summarize`, built on the async Anthropic
+  client with per-user cooldowns. Model configurable via `AI_MODEL` (defaults to
+  `claude-opus-4-8`).
+- Docker self-hosting: `Dockerfile`, hardened `docker-compose.yml`, and a
+  "Self-hosting with Docker" guide in the README.
 
 ## [0.1.0] — 2026-07-01
 

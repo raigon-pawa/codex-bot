@@ -22,6 +22,7 @@ INITIAL_EXTENSIONS = (
     "cogs.moderation",
     "cogs.components",
     "cogs.social",
+    "cogs.ai",
 )
 
 
