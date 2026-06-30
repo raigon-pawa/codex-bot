@@ -34,6 +34,15 @@ CREATE TABLE IF NOT EXISTS reminders (
     remind_at  REAL    NOT NULL,
     message    TEXT    NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS flashcards (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   INTEGER NOT NULL,
+    user_id    INTEGER NOT NULL,
+    front      TEXT    NOT NULL,
+    back       TEXT    NOT NULL,
+    created_at REAL    NOT NULL
+);
 """
 
 

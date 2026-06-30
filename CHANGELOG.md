@@ -13,6 +13,10 @@ All notable changes to Codex are documented here. The format is based on
   growing history (re-read at ~0.1× input cost once it passes the model minimum);
   `/endchat` clears a conversation. Per-reply token usage shown in the footer.
 
+- `study` cog — `/pomodoro start|stop` focus timers, `/remindme` + `/reminders`
+  (SQLite-backed, dispatched by a background task loop so they survive restarts),
+  and a per-server `/flashcards add|review|list|delete` deck.
+
 ### Changed
 - Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise
   cost; set `AI_MODEL=claude-opus-4-8` for top quality.
