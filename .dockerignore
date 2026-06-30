@@ -1,0 +1,19 @@
+# Keep secrets, local junk, and build artifacts OUT of the image.
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.git/
+.github/
+data/
+*.db
+*.sqlite3
+logs/
+tests/
+*.md
+.gitignore
+.ruff_cache/
+.pytest_cache/
