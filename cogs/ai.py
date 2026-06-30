@@ -61,9 +61,10 @@ NOT_CONFIGURED = "AI features aren't configured yet (missing `ANTHROPIC_API_KEY`
 
 
 def _fmt_usage(usage: anthropic.types.Usage) -> str:
+    # Always report `cached` so the footer never goes silent on cache info — it
+    # reads 0 until a conversation's prefix passes the model's cache minimum.
     cached = getattr(usage, "cache_read_input_tokens", 0) or 0
-    base = f"{usage.input_tokens} in · {usage.output_tokens} out"
-    return f"{base} · {cached} cached" if cached else base
+    return f"{usage.input_tokens} in · {usage.output_tokens} out · {cached} cached"
 
 
 class AI(commands.Cog):
