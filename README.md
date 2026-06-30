@@ -197,6 +197,68 @@ in `bot.py`. That's the whole pattern.
 
 ---
 
+## Self-hosting with Docker
+
+Codex is built to run on a small always-on machine (a mini PC, NAS, or Raspberry Pi),
+containerized and hardened out of the box.
+
+### Why your home IP stays private
+
+Codex is a **gateway bot** — it only makes *outbound* connections to Discord and never
+listens on a port. So:
+
+- You do **not** port-forward anything on your router.
+- Nothing on your machine is reachable from the internet or from Discord users; they
+  interact through Discord's servers, never with your box directly.
+- The compose file publishes **no ports** on purpose, so nothing is exposed even on your LAN.
+
+The only services that see your machine's IP are the ones Codex connects *out* to (Discord,
+and the Anthropic API once the AI cog exists) — ordinary outbound traffic, like a browser.
+If you want even that hidden, route the container's egress through a VPN.
+
+### Prerequisites
+
+Install Docker Engine + the Compose plugin, then let your user reach the daemon:
+
+```bash
+sudo usermod -aG docker $USER   # then log out and back in
+```
+
+> ⚠️ The `docker` group effectively grants root on the host. If you'd rather not grant that,
+> prefix the commands below with `sudo`, or set up
+> [rootless Docker](https://docs.docker.com/engine/security/rootless/).
+
+### Run it
+
+```bash
+cp .env.example .env     # fill in DISCORD_TOKEN, APPLICATION_ID, etc.
+chmod 600 .env           # lock the token down to your user
+
+docker compose up -d --build
+docker compose logs -f   # watch it come online
+```
+
+### Update to the latest version
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Hardening baked into the container
+
+- Runs as a **non-root** user; all Linux capabilities dropped; `no-new-privileges`.
+- **Read-only** root filesystem (only the data volume and `/tmp` are writable).
+- **No published ports** — outbound-only, as above.
+- **Resource limits** (512 MB RAM, 0.5 CPU) so a bug can't take down the host.
+- **Log rotation** so logs never fill the disk.
+- The token lives only in `.env` on the host — never in git or the image.
+
+Your XP/levels database persists in the `codex-data` Docker volume across restarts and
+updates.
+
+---
+
 ## Roadmap (suggested build order)
 
 1. **`ai`** — `/ask` and `/summarize` powered by Claude (headline feature).

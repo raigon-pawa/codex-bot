@@ -1,0 +1,42 @@
+services:
+  codex:
+    build: .
+    image: codex-bot
+    container_name: codex-bot
+    # Survive crashes and host reboots — your mini PC restarts, the bot comes back.
+    restart: unless-stopped
+
+    # Token & config are read from .env on the host. They are NOT baked into the
+    # image and NOT in git. Keep that file locked down: chmod 600 .env
+    env_file: .env
+    environment:
+      DB_PATH: /app/data/codex.db
+
+    # Persistent SQLite. Lives in a named volume so redeploys don't wipe XP/levels.
+    volumes:
+      - codex-data:/app/data
+
+    # NO `ports:` on purpose. Codex only makes OUTBOUND connections to Discord,
+    # so nothing listens on your network or the internet. Your home IP is never
+    # exposed to bot users, and you never port-forward anything on your router.
+
+    # ── Hardening ─────────────────────────────────────────────
+    security_opt:
+      - no-new-privileges:true   # process can't gain extra privileges
+    cap_drop:
+      - ALL                      # drop all Linux capabilities (the bot needs none)
+    read_only: true              # root filesystem is read-only…
+    tmpfs:
+      - /tmp                     # …except scratch space and the data volume
+    mem_limit: 512m              # a bug can't eat all your mini PC's RAM
+    cpus: 0.5
+
+    # Cap log size so logs can't fill the disk over months of uptime.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  codex-data:
