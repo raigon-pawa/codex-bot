@@ -7,6 +7,10 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Live seekbar** in the music player — the Now Playing message shows a progress
+  bar (`0:42 ▬▬▬🔘▬▬▬ 3:15`) that updates as the track plays, freezes on pause,
+  and is also rendered on demand by `/music nowplaying`. Position is tracked by
+  counting audio frames, so it stays accurate without wall-clock drift.
 - Auto-deploy workflow (`.github/workflows/deploy.yml`): a self-hosted runner on
   the NAS rebuilds Codex whenever `main` passes CI — outbound-only, no ports
   exposed. Setup notes in the README. Also exposes a `workflow_dispatch`

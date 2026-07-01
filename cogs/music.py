@@ -43,14 +43,53 @@ FFMPEG_OPTIONS = {
 }
 
 IDLE_TIMEOUT = 180  # seconds to linger while idle or alone before disconnecting
+SEEKBAR_INTERVAL = 12  # seconds between live progress-bar edits
+_BAR_WIDTH = 18  # cells in the rendered seekbar
 
 
 def _fmt_duration(seconds: int | None) -> str:
     if not seconds:
         return "live"
+    return _clock(seconds)
+
+
+def _clock(seconds: float) -> str:
+    """Format seconds as M:SS (or H:MM:SS), always — 0 renders as 0:00."""
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
+
+
+def _progress_bar(elapsed: float, total: int | None) -> str:
+    """A text seekbar: `0:42` ▬▬▬🔘▬▬▬ `3:15` (or a LIVE marker)."""
+    if not total:  # live stream / unknown length
+        return "🔴 **LIVE**"
+    ratio = min(max(elapsed / total, 0.0), 1.0)
+    filled = int(ratio * (_BAR_WIDTH - 1))
+    bar = "▬" * filled + "🔘" + "▬" * (_BAR_WIDTH - 1 - filled)
+    return f"`{_clock(elapsed)}` {bar} `{_clock(total)}`"
+
+
+class TrackedAudio(discord.PCMVolumeTransformer):
+    """Volume-adjustable source that counts frames read to expose elapsed time.
+
+    discord.py pulls one 20 ms frame per `read()`; it stops reading while paused,
+    so counting frames tracks true playback position with no wall-clock drift.
+    """
+
+    def __init__(self, original: discord.AudioSource, volume: float) -> None:
+        super().__init__(original, volume=volume)
+        self.frames = 0
+
+    def read(self) -> bytes:
+        data = super().read()
+        if data:
+            self.frames += 1
+        return data
+
+    @property
+    def elapsed(self) -> float:
+        return self.frames * 0.02  # each frame is 20 ms
 
 
 @dataclass
@@ -67,9 +106,11 @@ class GuildMusic:
     queue: deque[Track] = field(default_factory=deque)
     current: Track | None = None
     volume: float = 0.5
-    source: discord.PCMVolumeTransformer | None = None
+    source: TrackedAudio | None = None
     text_channel: discord.abc.Messageable | None = None
     idle_task: asyncio.Task | None = None
+    np_message: discord.Message | None = None  # the live "Now playing" message
+    np_task: asyncio.Task | None = None  # loop editing the seekbar
 
 
 class Music(commands.Cog):
@@ -85,6 +126,8 @@ class Music(commands.Cog):
         for state in self.states.values():
             if state.idle_task and not state.idle_task.done():
                 state.idle_task.cancel()
+            if state.np_task and not state.np_task.done():
+                state.np_task.cancel()
         for vc in list(self.bot.voice_clients):
             with contextlib.suppress(Exception):
                 await vc.disconnect(force=True)
@@ -124,6 +167,7 @@ class Music(commands.Cog):
         vc = guild.voice_client
         if state is None or not isinstance(vc, discord.VoiceClient):
             return
+        self._stop_seekbar(state)  # the previous track's live bar is done
         if not state.queue:
             state.current = None
             state.source = None
@@ -139,11 +183,12 @@ class Music(commands.Cog):
             log.exception("Failed to start FFmpeg for %s", track.title)
             self._play_next(guild)  # skip the bad track, try the next
             return
-        state.source = discord.PCMVolumeTransformer(audio, volume=state.volume)
+        state.source = TrackedAudio(audio, state.volume)
         vc.play(state.source, after=lambda e: self._play_next(guild, e))
         if announce and state.text_channel is not None:
             with contextlib.suppress(discord.HTTPException):
-                await state.text_channel.send(embed=self._now_playing_embed(state))
+                message = await state.text_channel.send(embed=self._now_playing_embed(state))
+                self._begin_seekbar(guild, message)
 
     def _schedule_idle_leave(self, guild: discord.Guild) -> None:
         state = self.states.get(guild.id)
@@ -165,15 +210,63 @@ class Music(commands.Cog):
             await vc.disconnect()
             self.states.pop(guild.id, None)
 
-    def _now_playing_embed(self, state: GuildMusic) -> discord.Embed:
+    # ── Live seekbar ──────────────────────────────────────────
+    def _begin_seekbar(self, guild: discord.Guild, message: discord.Message) -> None:
+        state = self.states.get(guild.id)
+        if state is None:
+            return
+        self._stop_seekbar(state)
+        state.np_message = message
+        state.np_task = self.bot.loop.create_task(self._seekbar_loop(guild))
+
+    def _stop_seekbar(self, state: GuildMusic) -> None:
+        if state.np_task and not state.np_task.done():
+            state.np_task.cancel()
+        state.np_task = None
+        state.np_message = None
+
+    async def _seekbar_loop(self, guild: discord.Guild) -> None:
+        """Refresh the Now Playing message so the bar tracks playback live."""
+        with contextlib.suppress(asyncio.CancelledError):
+            while True:
+                await asyncio.sleep(SEEKBAR_INTERVAL)
+                state = self.states.get(guild.id)
+                vc = guild.voice_client
+                if (
+                    state is None
+                    or state.np_message is None
+                    or state.current is None
+                    or not isinstance(vc, discord.VoiceClient)
+                    or not (vc.is_playing() or vc.is_paused())
+                ):
+                    return
+                try:
+                    await state.np_message.edit(
+                        embed=self._now_playing_embed(state, paused=vc.is_paused())
+                    )
+                except discord.NotFound:
+                    return  # message was deleted; stop editing
+                except discord.HTTPException:
+                    pass
+
+    async def _refresh_np(self, guild: discord.Guild, *, paused: bool) -> None:
+        """Immediately redraw the Now Playing message (e.g. on pause/resume)."""
+        state = self.states.get(guild.id)
+        if state is None or state.np_message is None or state.current is None:
+            return
+        with contextlib.suppress(discord.HTTPException):
+            await state.np_message.edit(embed=self._now_playing_embed(state, paused=paused))
+
+    def _now_playing_embed(self, state: GuildMusic, *, paused: bool = False) -> discord.Embed:
         track = state.current
         assert track is not None
+        elapsed = state.source.elapsed if state.source is not None else 0.0
         embed = discord.Embed(
-            title="🎵 Now playing",
+            title="⏸️ Paused" if paused else "🎵 Now playing",
             description=f"**[{track.title}]({track.url})**",
             color=config.COLOR,
         )
-        embed.add_field(name="Duration", value=_fmt_duration(track.duration))
+        embed.add_field(name="Progress", value=_progress_bar(elapsed, track.duration), inline=False)
         embed.add_field(name="Requested by", value=f"<@{track.requester_id}>")
         embed.add_field(name="Volume", value=f"{int(state.volume * 100)}%")
         return embed
@@ -229,7 +322,10 @@ class Music(commands.Cog):
         state.queue.append(track)
         if not vc.is_playing() and state.current is None:
             await self._advance(guild, announce=False)
-            await interaction.followup.send(embed=self._now_playing_embed(state))
+            message = await interaction.followup.send(
+                embed=self._now_playing_embed(state), wait=True
+            )
+            self._begin_seekbar(guild, message)
         else:
             await interaction.followup.send(
                 f"✅ Queued **{track.title}** — position {len(state.queue)}."
@@ -246,19 +342,25 @@ class Music(commands.Cog):
 
     @music.command(name="pause", description="Pause playback.")
     async def pause(self, interaction: discord.Interaction) -> None:
-        vc = interaction.guild.voice_client  # type: ignore[union-attr]
+        guild = interaction.guild
+        assert guild is not None
+        vc = guild.voice_client
         if isinstance(vc, discord.VoiceClient) and vc.is_playing():
             vc.pause()
             await interaction.response.send_message("⏸️ Paused.")
+            await self._refresh_np(guild, paused=True)
         else:
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
 
     @music.command(name="resume", description="Resume playback.")
     async def resume(self, interaction: discord.Interaction) -> None:
-        vc = interaction.guild.voice_client  # type: ignore[union-attr]
+        guild = interaction.guild
+        assert guild is not None
+        vc = guild.voice_client
         if isinstance(vc, discord.VoiceClient) and vc.is_paused():
             vc.resume()
             await interaction.response.send_message("▶️ Resumed.")
+            await self._refresh_np(guild, paused=False)
         else:
             await interaction.response.send_message("Nothing is paused.", ephemeral=True)
 
@@ -269,6 +371,7 @@ class Music(commands.Cog):
         state = self.states.get(guild.id)
         if state is not None:
             state.queue.clear()
+            self._stop_seekbar(state)
         vc = guild.voice_client
         if isinstance(vc, discord.VoiceClient) and (vc.is_playing() or vc.is_paused()):
             vc.stop()
@@ -282,6 +385,9 @@ class Music(commands.Cog):
         if not isinstance(vc, discord.VoiceClient):
             await interaction.response.send_message("I'm not in a voice channel.", ephemeral=True)
             return
+        state = self.states.get(guild.id)
+        if state is not None:
+            self._stop_seekbar(state)
         await vc.disconnect()
         self.states.pop(guild.id, None)
         await interaction.response.send_message("👋 Left the voice channel.")
@@ -305,13 +411,17 @@ class Music(commands.Cog):
         )
         await interaction.response.send_message(embed=embed)
 
-    @music.command(name="nowplaying", description="Show the current track.")
+    @music.command(name="nowplaying", description="Show the current track and seekbar.")
     async def nowplaying(self, interaction: discord.Interaction) -> None:
-        state = self.states.get(interaction.guild_id)  # type: ignore[arg-type]
+        guild = interaction.guild
+        assert guild is not None
+        state = self.states.get(guild.id)
         if state is None or state.current is None:
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
             return
-        await interaction.response.send_message(embed=self._now_playing_embed(state))
+        vc = guild.voice_client
+        paused = isinstance(vc, discord.VoiceClient) and vc.is_paused()
+        await interaction.response.send_message(embed=self._now_playing_embed(state, paused=paused))
 
     @music.command(name="volume", description="Set the playback volume (0-100).")
     @app_commands.describe(level="Volume percentage from 0 to 100")
