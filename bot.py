@@ -29,6 +29,7 @@ INITIAL_EXTENSIONS = (
     "cogs.automod",
     "cogs.music",
     "cogs.premium",
+    "cogs.owner",
 )
 
 
@@ -54,16 +55,14 @@ class CodexBot(commands.Bot):
             except Exception:
                 log.exception("Failed to load extension: %s", ext)
 
-        # Sync application (slash) commands with Discord.
-        if config.DEV_GUILD_ID:
-            # Dev mode: copy global commands to one guild for INSTANT updates.
-            guild = discord.Object(id=config.DEV_GUILD_ID)
-            self.tree.copy_global_to(guild=guild)
-            synced = await self.tree.sync(guild=guild)
-            log.info("Synced %d commands to dev guild %s", len(synced), config.DEV_GUILD_ID)
-        else:
+        # Register slash commands GLOBALLY so every server Codex is in gets them
+        # (the first global sync can take up to ~1h to propagate). For instant
+        # updates in one server while developing, use the owner-only `!sync guild`.
+        try:
             synced = await self.tree.sync()
-            log.info("Synced %d global commands (may take up to ~1h to appear)", len(synced))
+            log.info("Synced %d global commands (up to ~1h to appear the first time)", len(synced))
+        except Exception:
+            log.exception("Failed to sync application commands")
 
     async def on_ready(self) -> None:
         assert self.user is not None

@@ -28,6 +28,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `automod`      | Native AutoMod rule management + an audit **mod-log** (`/automod`, `/logging`)|
 | `music`        | Voice playback via yt-dlp + FFmpeg (`/music play`, queue, volume, …)         |
 | `premium`      | App Subscriptions — SKU/entitlement-gated perks (`/premium`)                 |
+| `owner`        | Owner-only prefix commands — `!sync` (global / guild / clear)                |
 
 29 slash commands + 2 context menus, all verified to load.
 
@@ -126,12 +127,20 @@ If you'd rather build the invite link by hand, open **OAuth2 → URL Generator**
 > Prefer not to grant `Administrator` — it's a security risk and hides which permissions
 > a feature actually needs.
 
-### 1.6 Get your test server ID (for instant command updates)
+### 1.6 Command syncing (and instant updates while testing)
 
-In Discord: **User Settings → Advanced → Developer Mode = ON**. Then right-click your
-server icon → **Copy Server ID** and put it in `.env` as `DEV_GUILD_ID`. With it set,
-slash commands sync to that one server **instantly**; without it, global sync can take up
-to ~1 hour to propagate the first time.
+Codex syncs its slash commands **globally** on startup, so every server it's in gets them.
+Global syncs can take **up to ~1 hour** to appear the first time.
+
+While developing, that wait is annoying, so there's an owner-only prefix command:
+
+- `!sync guild` — sync to the current server **instantly** (great for testing).
+- `!sync` — force a global re-sync (e.g. after adding a command).
+- `!sync clear` — remove the current server's guild-specific commands (clears duplicates
+  if you previously used a per-guild sync).
+
+You can also mention the bot: `@Codex sync`. (`DEV_GUILD_ID` in `.env` is legacy and no
+longer used — global sync is automatic.)
 
 ---
 
@@ -221,7 +230,8 @@ codex-bot/
     ├── gaming.py       # polls, dice, trivia, LFG
     ├── automod.py      # AutoMod rules + mod-log
     ├── music.py        # voice playback (yt-dlp + FFmpeg)
-    └── premium.py      # App Subscriptions (SKUs + entitlements)
+    ├── premium.py      # App Subscriptions (SKUs + entitlements)
+    └── owner.py        # owner-only !sync command
 ```
 
 **Adding a feature** = drop a new file in `cogs/`, write a `Cog` subclass with an
