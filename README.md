@@ -278,6 +278,44 @@ git pull
 docker compose up -d --build
 ```
 
+### Auto-deploy on push (self-hosted runner)
+
+`.github/workflows/deploy.yml` rebuilds Codex on the NAS automatically whenever
+`main` passes CI. It runs on a **self-hosted GitHub Actions runner** installed on
+the NAS: the runner dials *out* to GitHub and waits for jobs, so — like the bot
+itself — **nothing is exposed to the internet and you port-forward nothing.**
+
+**1. Install the runner on the NAS.** In the repo: **Settings → Actions → Runners
+→ New self-hosted runner → Linux**. Follow the download steps it shows, then
+configure it with the `nas` label the workflow targets:
+
+```bash
+./config.sh --url https://github.com/raigon-pawa/codex-bot \
+            --token <TOKEN_FROM_THE_PAGE> --labels nas
+```
+
+**2. Run it as a service** (survives reboots, starts on boot). Install it under
+the **same user that owns `~/codex-bot`** and is in the `docker` group:
+
+```bash
+sudo ./svc.sh install <your-user>
+sudo ./svc.sh start
+```
+
+**3. (Optional) point it at your clone.** The workflow deploys in `~/codex-bot`
+of the runner's user. If your clone lives elsewhere, set a repository variable
+**`DEPLOY_PATH`** (Settings → Secrets and variables → Actions → Variables).
+
+That's it. Merge a PR → CI runs → on success the runner does
+`git reset --hard origin/main && docker compose up -d --build` on the NAS.
+
+> ⚠️ **Public-repo note.** GitHub advises care with self-hosted runners on public
+> repos, because fork PRs can run code on your runner. This setup avoids that: CI
+> runs on GitHub-hosted runners, and the deploy triggers **only** after CI succeeds
+> on `main` (a push that requires write access) — fork-PR CI runs are filtered out
+> and never reach the NAS. For extra safety set **Settings → Actions → General →
+> Fork pull request workflows → Require approval for all external contributors**.
+
 ### Hardening baked into the container
 
 - Runs as a **non-root** user; all Linux capabilities dropped; `no-new-privileges`.

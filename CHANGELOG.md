@@ -6,6 +6,11 @@ All notable changes to Codex are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- Auto-deploy workflow (`.github/workflows/deploy.yml`): a self-hosted runner on
+  the NAS rebuilds Codex whenever `main` passes CI — outbound-only, no ports
+  exposed. Setup notes in the README.
+
 ### Changed
 - `/help` now groups commands by category and lists command **groups** (e.g.
   `/music`, `/automod`, `/premium`) and **context menus** — the old flat list
