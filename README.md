@@ -27,8 +27,9 @@ surfaces, so you can confirm everything works before piling on features:
 | `gaming`       | Native `/poll`, `/roll` dice, `/trivia`, `/lfg` board                        |
 | `automod`      | Native AutoMod rule management + an audit **mod-log** (`/automod`, `/logging`)|
 | `music`        | Voice playback via yt-dlp + FFmpeg (`/music play`, queue, volume, …)         |
+| `premium`      | App Subscriptions — SKU/entitlement-gated perks (`/premium`)                 |
 
-28 slash commands + 2 context menus, all verified to load.
+29 slash commands + 2 context menus, all verified to load.
 
 ---
 
@@ -175,12 +176,26 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | **AutoMod** rule management             | `automod` — `/automod` keyword/preset/mention rules| ✅ |
 | **Audit log** streaming                 | `automod` — `/logging` → mod-log channel           | ✅ |
 | **Voice / music**                       | `music` — `/music play` (yt-dlp + FFmpeg)          | ✅ |
+| **App Subscriptions / Entitlements**    | `premium` — SKU/entitlement-gated perks             | ✅ |
 | **Scheduled Events** (study sessions)   | `events` extension                                 | 🔜 |
 | **Webhooks** (announcements/feeds)      | `webhooks`                                          | 🔜 |
 | **Application Emojis**                  | branding / reactions                               | 🔜 |
 | **Linked Roles** (role-connection meta) | `linkedroles` (e.g. "verified student")           | 🔜 |
-| **App Subscriptions / Entitlements**    | premium tier for public release                    | 🔜 |
 | **Soundboard / Stage channels**         | community/events features                           | 🔜 |
+
+### Enabling Premium (App Subscriptions)
+
+The `premium` cog gates perks on a Discord **subscription SKU** — Discord handles
+the payment, so there's no billing code on our side. To turn it on:
+
+1. **Developer Portal → Monetization** — complete the eligibility steps and create
+   a **subscription SKU**. (Monetization has requirements; the cog runs fine
+   unconfigured until you're approved.)
+2. Run **`/premium skus`** (owner-only — set `OWNER_IDS` first) to read the SKU's ID.
+3. Put it in **`PREMIUM_SKU_ID`** (`.env`) and restart. `/premium status` and the
+   native upgrade button now reflect real subscriptions.
+
+Gate any command elsewhere with the same one-line entitlement check the cog uses.
 
 ---
 
@@ -205,7 +220,8 @@ codex-bot/
     ├── roles.py        # self-assign + level roles
     ├── gaming.py       # polls, dice, trivia, LFG
     ├── automod.py      # AutoMod rules + mod-log
-    └── music.py        # voice playback (yt-dlp + FFmpeg)
+    ├── music.py        # voice playback (yt-dlp + FFmpeg)
+    └── premium.py      # App Subscriptions (SKUs + entitlements)
 ```
 
 **Adding a feature** = drop a new file in `cogs/`, write a `Cog` subclass with an
@@ -284,6 +300,7 @@ updates.
 4. ✅ **`gaming`** — native polls, dice, trivia, and an LFG "looking for group" board.
 5. ✅ **`automod` / `logging`** — AutoMod rules and an audit-log mod channel.
 6. ✅ **`music`** — voice playback (FFmpeg + yt-dlp).
-7. 🔜 **`premium`** — App Subscriptions for a public-release tier.
+7. ✅ **`premium`** — App Subscriptions for a public-release tier.
 
-Each is an isolated cog, so you can build and test them one at a time.
+Every roadmap cog is built. Each is an isolated cog, so you can build and test
+them one at a time.
