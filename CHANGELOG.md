@@ -11,6 +11,10 @@ All notable changes to Codex are documented here. The format is based on
   bar (`0:42 ▬▬▬🔘▬▬▬ 3:15`) that updates as the track plays, freezes on pause,
   and is also rendered on demand by `/music nowplaying`. Position is tracked by
   counting audio frames, so it stays accurate without wall-clock drift.
+- **Player control panel** — buttons under the Now Playing message for seek −15s /
+  pause-resume / skip / seek +15s / volume down / up. Interactive seeking restarts
+  FFmpeg at the new offset (`-ss`) without advancing the queue. Controls are limited
+  to members in the voice channel and to the newest player message.
 - Auto-deploy workflow (`.github/workflows/deploy.yml`): a self-hosted runner on
   the NAS rebuilds Codex whenever `main` passes CI — outbound-only, no ports
   exposed. Setup notes in the README. Also exposes a `workflow_dispatch`
