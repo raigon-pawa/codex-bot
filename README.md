@@ -25,8 +25,9 @@ surfaces, so you can confirm everything works before piling on features:
 | `study`        | `/pomodoro`, `/remindme` (SQLite-backed), `/flashcards` deck                 |
 | `roles`        | Button self-assign roles (persistent) + auto level-up roles                  |
 | `gaming`       | Native `/poll`, `/roll` dice, `/trivia`, `/lfg` board                        |
+| `automod`      | Native AutoMod rule management + an audit **mod-log** (`/automod`, `/logging`)|
 
-11 slash commands + 2 context menus, all verified to load.
+27 slash commands + 2 context menus, all verified to load.
 
 ---
 
@@ -166,13 +167,13 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | **Polls** (native Discord polls)        | `gaming` — `/poll`                                 | ✅ |
 | Gaming utilities                        | `gaming` — dice, trivia, LFG                        | ✅ |
 | **Reaction roles** / self-assign roles  | `roles` — button panel + auto level roles          | ✅ |
+| **AutoMod** rule management             | `automod` — `/automod` keyword/preset/mention rules| ✅ |
+| **Audit log** streaming                 | `automod` — `/logging` → mod-log channel           | ✅ |
 | **Voice / music**                       | `music` (needs FFmpeg + a voice source)           | 🔜 |
 | **Scheduled Events** (study sessions)   | `events` extension                                 | 🔜 |
-| **AutoMod** rule management             | `automod`                                          | 🔜 |
 | **Webhooks** (announcements/feeds)      | `webhooks`                                          | 🔜 |
 | **Application Emojis**                  | branding / reactions                               | 🔜 |
 | **Linked Roles** (role-connection meta) | `linkedroles` (e.g. "verified student")           | 🔜 |
-| **Audit log** streaming                 | `logging` cog → mod-log channel                    | 🔜 |
 | **App Subscriptions / Entitlements**    | premium tier for public release                    | 🔜 |
 | **Soundboard / Stage channels**         | community/events features                           | 🔜 |
 
@@ -193,7 +194,12 @@ codex-bot/
     ├── events.py
     ├── moderation.py
     ├── components.py
-    └── social.py
+    ├── social.py
+    ├── ai.py           # Claude /ask, /chat (cached), /summarize
+    ├── study.py        # pomodoro, reminders, flashcards
+    ├── roles.py        # self-assign + level roles
+    ├── gaming.py       # polls, dice, trivia, LFG
+    └── automod.py      # AutoMod rules + mod-log
 ```
 
 **Adding a feature** = drop a new file in `cogs/`, write a `Cog` subclass with an
@@ -266,12 +272,12 @@ updates.
 
 ## Roadmap (suggested build order)
 
-1. **`ai`** — `/ask` and `/summarize` powered by Claude (headline feature).
-2. **`study`** — pomodoro timers, `/remindme`, flashcard decks, study-session events.
-3. **`roles`** — reaction/button self-assign roles + automatic level roles.
-4. **`gaming`** — native polls, dice, trivia, and an LFG "looking for group" board.
-5. **`music`** — voice playback (FFmpeg + yt-dlp).
-6. **`automod` / `logging`** — AutoMod rules and an audit-log mod channel.
-7. **`premium`** — App Subscriptions for a public-release tier.
+1. ✅ **`ai`** — `/ask` and `/summarize` powered by Claude (headline feature).
+2. ✅ **`study`** — pomodoro timers, `/remindme`, flashcard decks, study-session events.
+3. ✅ **`roles`** — reaction/button self-assign roles + automatic level roles.
+4. ✅ **`gaming`** — native polls, dice, trivia, and an LFG "looking for group" board.
+5. ✅ **`automod` / `logging`** — AutoMod rules and an audit-log mod channel.
+6. 🔜 **`music`** — voice playback (FFmpeg + yt-dlp).
+7. 🔜 **`premium`** — App Subscriptions for a public-release tier.
 
 Each is an isolated cog, so you can build and test them one at a time.
