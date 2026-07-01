@@ -118,6 +118,7 @@ class GuildMusic:
     np_view: PlayerControls | None = None  # its control buttons
     np_task: asyncio.Task | None = None  # loop editing the seekbar
     seek_to: float | None = None  # pending seek position (consumed by the after-hook)
+    manual_stop: bool = False  # set before a deliberate stop() (skip/stop) vs natural end
 
 
 class PlayerControls(discord.ui.View):
@@ -164,7 +165,8 @@ class PlayerControls(discord.ui.View):
         pre = await self.cog.control_precheck(interaction)
         if pre is None:
             return
-        _state, vc = pre
+        state, vc = pre
+        state.manual_stop = True  # a skip, not a natural finish
         await interaction.response.defer()
         vc.stop()  # after-hook advances the queue
 
@@ -261,14 +263,22 @@ class Music(commands.Cog):
             return
         if error:
             log.error("Playback error in guild %s: %s", guild.id, error)
-        asyncio.run_coroutine_threadsafe(self._advance(guild), self.bot.loop)
+        # Natural end (no deliberate stop) → the finished track's bar should show full.
+        finished = False
+        if state is not None:
+            finished = not state.manual_stop
+            state.manual_stop = False
+        asyncio.run_coroutine_threadsafe(self._advance(guild, finished=finished), self.bot.loop)
 
-    async def _advance(self, guild: discord.Guild, *, announce: bool = True) -> None:
+    async def _advance(
+        self, guild: discord.Guild, *, announce: bool = True, finished: bool = False
+    ) -> None:
         state = self.states.get(guild.id)
         vc = guild.voice_client
         if state is None or not isinstance(vc, discord.VoiceClient):
             return
-        await self._teardown_player(state)  # finalize the previous track's player
+        # Finalize the previous track's player (fill the bar if it finished).
+        await self._teardown_player(state, finished=finished)
         if not state.queue:
             state.current = None
             state.source = None
@@ -346,8 +356,13 @@ class Music(commands.Cog):
         state.np_view = view
         state.np_task = self.bot.loop.create_task(self._seekbar_loop(guild))
 
-    async def _teardown_player(self, state: GuildMusic) -> None:
-        """Stop the seekbar loop and strip controls off the old Now Playing message."""
+    async def _teardown_player(self, state: GuildMusic, *, finished: bool = False) -> None:
+        """Stop the seekbar loop and strip controls off the old Now Playing message.
+
+        When `finished`, redraw the bar full first — the last live tick can be up to
+        SEEKBAR_INTERVAL stale, and yt-dlp's duration often runs a hair past the audio,
+        so a naturally-ended track would otherwise look stuck a few seconds short.
+        """
         if state.np_task and not state.np_task.done():
             state.np_task.cancel()
         state.np_task = None
@@ -355,7 +370,12 @@ class Music(commands.Cog):
             state.np_view.stop()
         if state.np_message is not None:
             with contextlib.suppress(discord.HTTPException):
-                await state.np_message.edit(view=None)
+                if finished and state.current is not None:
+                    await state.np_message.edit(
+                        embed=self.now_playing_embed(state, finished=True), view=None
+                    )
+                else:
+                    await state.np_message.edit(view=None)
         state.np_message = None
         state.np_view = None
 
@@ -391,12 +411,25 @@ class Music(commands.Cog):
         with contextlib.suppress(discord.HTTPException):
             await state.np_message.edit(embed=self.now_playing_embed(state, paused=paused))
 
-    def now_playing_embed(self, state: GuildMusic, *, paused: bool = False) -> discord.Embed:
+    def now_playing_embed(
+        self, state: GuildMusic, *, paused: bool = False, finished: bool = False
+    ) -> discord.Embed:
         track = state.current
         assert track is not None
-        elapsed = state.source.elapsed if state.source is not None else 0.0
+        if finished and track.duration:
+            elapsed: float = track.duration  # snap the bar to the end
+        elif state.source is not None:
+            elapsed = state.source.elapsed
+        else:
+            elapsed = 0.0
+        if finished:
+            title = "✅ Finished"
+        elif paused:
+            title = "⏸️ Paused"
+        else:
+            title = "🎵 Now playing"
         embed = discord.Embed(
-            title="⏸️ Paused" if paused else "🎵 Now playing",
+            title=title,
             description=f"**[{track.title}]({track.url})**",
             color=config.COLOR,
         )
@@ -510,10 +543,15 @@ class Music(commands.Cog):
 
     @music.command(name="skip", description="Skip the current track.")
     async def skip(self, interaction: discord.Interaction) -> None:
-        vc = interaction.guild.voice_client  # type: ignore[union-attr]
+        guild = interaction.guild
+        assert guild is not None
+        vc = guild.voice_client
         if not isinstance(vc, discord.VoiceClient) or not (vc.is_playing() or vc.is_paused()):
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
             return
+        state = self.states.get(guild.id)
+        if state is not None:
+            state.manual_stop = True  # a skip, not a natural finish
         vc.stop()  # fires the `after` hook, which advances the queue
         await interaction.response.send_message("⏭️ Skipped.")
 
@@ -548,6 +586,7 @@ class Music(commands.Cog):
         state = self.states.get(guild.id)
         if state is not None:
             state.queue.clear()
+            state.manual_stop = True  # not a natural finish
             await self._teardown_player(state)
         vc = guild.voice_client
         if isinstance(vc, discord.VoiceClient) and (vc.is_playing() or vc.is_paused()):

@@ -33,6 +33,10 @@ All notable changes to Codex are documented here. The format is based on
   `NoneType has no attribute 'is_finished'` when `PREMIUM_SKU_ID` was unset;
   the upgrade prompt now uses discord's `MISSING` sentinel instead of `None`
   for the (absent) view.
+- **Seekbar stuck near the end** — a finished track left the bar a few seconds
+  short (the last live tick is up to 12s stale and yt-dlp's duration often runs
+  past the real audio). Naturally-ended tracks now finalize with a full bar and
+  a "✅ Finished" title; skips/stops don't falsely show as finished.
 
 ## [1.0.0] — 2026-07-01
 
