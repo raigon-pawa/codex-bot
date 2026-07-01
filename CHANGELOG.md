@@ -9,7 +9,8 @@ All notable changes to Codex are documented here. The format is based on
 ### Added
 - Auto-deploy workflow (`.github/workflows/deploy.yml`): a self-hosted runner on
   the NAS rebuilds Codex whenever `main` passes CI — outbound-only, no ports
-  exposed. Setup notes in the README.
+  exposed. Setup notes in the README. Also exposes a `workflow_dispatch`
+  "Run workflow" button to redeploy current `main` on demand.
 
 ### Changed
 - `/help` now groups commands by category and lists command **groups** (e.g.

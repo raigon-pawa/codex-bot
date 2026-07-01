@@ -12,6 +12,8 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  # Manual "Deploy now" button in the Actions tab (redeploy current main on demand).
+  workflow_dispatch:
 
 # Never let two deploys rebuild the container at the same time.
 concurrency:
@@ -20,7 +22,8 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run on a manual dispatch, or after CI succeeds on main.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: [self-hosted, nas]
     env:
       # Path to your clone on the NAS (the one holding .env + the volume). Defaults
