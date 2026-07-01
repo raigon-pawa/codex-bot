@@ -21,9 +21,17 @@ All notable changes to Codex are documented here. The format is based on
   "Run workflow" button to redeploy current `main` on demand.
 
 ### Changed
+- **Commands now sync globally on startup** so every server Codex joins gets them.
+  Previously, setting `DEV_GUILD_ID` synced to that one server only, so new servers
+  showed no commands. `DEV_GUILD_ID` is now legacy/unused.
 - `/help` is now **paginated** — one category per page with Prev/Next buttons and
   a jump dropdown (and a page counter). It lists command **groups** (e.g. `/music`,
   `/automod`, `/premium`) and **context menus**, which the old flat list omitted.
+
+### Added
+- `owner` cog — an owner-only `!sync` prefix command (`!sync` global, `!sync guild`
+  for instant per-server updates, `!sync clear` to drop a server's guild commands).
+  A prefix command works even before slash commands have synced to a server.
 
 ### Fixed
 - **Music voice crash** — `/music play` failed with `davey library needed in

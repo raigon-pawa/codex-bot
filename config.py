@@ -31,6 +31,8 @@ DISCORD_TOKEN: str = _require("DISCORD_TOKEN")
 APPLICATION_ID: int = int(_require("APPLICATION_ID"))
 
 # ── Optional ──────────────────────────────────────────────
+# Legacy: commands now sync globally on startup; use `!sync guild` for instant
+# per-server updates. Kept for backward compatibility (no longer used at startup).
 DEV_GUILD_ID: int | None = _optional_int("DEV_GUILD_ID")
 ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 # Claude model for the AI cog. Default is the cost-effective Haiku tier; set
