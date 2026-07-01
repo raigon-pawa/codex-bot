@@ -31,6 +31,10 @@ All notable changes to Codex are documented here. The format is based on
   search via yt-dlp), plus `skip`, `pause`, `resume`, `stop`, `queue`,
   `nowplaying`, `volume`, and `leave`. Streams through FFmpeg with live volume
   control and auto-leaves when idle or left alone.
+- `premium` cog — Discord App Subscriptions: `/premium status|perks|exclusive`
+  gate perks on a SKU entitlement (native upgrade button included), and
+  `/premium skus` (owner-only) lists the app's SKU IDs for setup. New optional
+  `PREMIUM_SKU_ID` config; the cog no-ops gracefully until it's set.
 
 ### Changed
 - Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise

@@ -28,6 +28,7 @@ INITIAL_EXTENSIONS = (
     "cogs.gaming",
     "cogs.automod",
     "cogs.music",
+    "cogs.premium",
 )
 
 
