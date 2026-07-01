@@ -21,9 +21,9 @@ All notable changes to Codex are documented here. The format is based on
   "Run workflow" button to redeploy current `main` on demand.
 
 ### Changed
-- `/help` now groups commands by category and lists command **groups** (e.g.
-  `/music`, `/automod`, `/premium`) and **context menus** — the old flat list
-  showed only standalone commands, silently omitting every group.
+- `/help` is now **paginated** — one category per page with Prev/Next buttons and
+  a jump dropdown (and a page counter). It lists command **groups** (e.g. `/music`,
+  `/automod`, `/premium`) and **context menus**, which the old flat list omitted.
 
 ### Fixed
 - **Music voice crash** — `/music play` failed with `davey library needed in

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 
 import discord
@@ -34,6 +35,62 @@ def _format_entry(command: app_commands.Command | app_commands.Group) -> str:
         subs = " · ".join(sub.name for sub in command.commands)
         return f"`/{command.name}` — {subs}"
     return f"`/{command.name}` — {command.description}"
+
+
+class HelpView(discord.ui.View):
+    """Paginated command help: one category per page, with a jump dropdown.
+
+    The message is ephemeral, so only the invoker sees and can use the controls.
+    """
+
+    def __init__(self, pages: list[tuple[str, str]]) -> None:
+        super().__init__(timeout=180)
+        self.pages = pages
+        self.index = 0
+        self.message: discord.Message | None = None
+        self.jump.options = [
+            discord.SelectOption(label=label, value=str(i))
+            for i, (label, _body) in enumerate(pages[:25])  # Discord caps a select at 25
+        ]
+        self._sync()
+
+    def render(self) -> discord.Embed:
+        label, body = self.pages[self.index]
+        embed = discord.Embed(title=f"Codex — {label}", description=body, color=config.COLOR)
+        embed.set_footer(text=f"Page {self.index + 1}/{len(self.pages)}")
+        return embed
+
+    def _sync(self) -> None:
+        self.prev.disabled = self.index == 0
+        self.next.disabled = self.index == len(self.pages) - 1
+        for option in self.jump.options:
+            option.default = int(option.value) == self.index
+
+    async def _show(self, interaction: discord.Interaction) -> None:
+        self._sync()
+        await interaction.response.edit_message(embed=self.render(), view=self)
+
+    @discord.ui.select(placeholder="Jump to a category…", row=0)
+    async def jump(self, interaction: discord.Interaction, select: discord.ui.Select) -> None:
+        self.index = int(select.values[0])
+        await self._show(interaction)
+
+    @discord.ui.button(label="Prev", emoji="⬅️", style=discord.ButtonStyle.secondary, row=1)
+    async def prev(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        self.index = max(0, self.index - 1)
+        await self._show(interaction)
+
+    @discord.ui.button(label="Next", emoji="➡️", style=discord.ButtonStyle.secondary, row=1)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        self.index = min(len(self.pages) - 1, self.index + 1)
+        await self._show(interaction)
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True  # type: ignore[attr-defined]
+        if self.message is not None:
+            with contextlib.suppress(discord.HTTPException):
+                await self.message.edit(view=self)
 
 
 class General(commands.Cog):
@@ -89,21 +146,17 @@ class General(commands.Cog):
         embed.add_field(name=f"Roles ({len(roles)})", value=" ".join(roles) or "None", inline=False)
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(description="List Codex's commands by category.")
-    async def help(self, interaction: discord.Interaction) -> None:
-        embed = discord.Embed(
-            title="Codex — Command Help",
-            description="Commands grouped by feature. Groups show their subcommands.",
-            color=config.COLOR,
-        )
+    def _help_pages(self) -> list[tuple[str, str]]:
+        """One (label, body) page per feature category, in display order."""
+        pages: list[tuple[str, str]] = []
+        shown = set()
 
         def add_section(label: str, cog: commands.Cog) -> None:
             cmds = sorted(cog.get_app_commands(), key=lambda c: c.name)
             if cmds:
-                value = "\n".join(_format_entry(c) for c in cmds)
-                embed.add_field(name=label, value=value[:1024], inline=False)
+                body = "\n".join(_format_entry(c) for c in cmds)
+                pages.append((label, body[:4096]))
 
-        shown = set()
         for cog_name, label in _HELP_CATEGORIES:
             cog = self.bot.get_cog(cog_name)
             if cog is not None:
@@ -120,9 +173,18 @@ class General(commands.Cog):
         ) + self.bot.tree.get_commands(type=discord.AppCommandType.message)
         if menus:
             lines = [f"`{m.name}` (right-click)" for m in sorted(menus, key=lambda m: m.name)]
-            embed.add_field(name="🖱️ Context menus", value="\n".join(lines), inline=False)
+            pages.append(("🖱️ Context menus", "\n".join(lines)))
+        return pages
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    @app_commands.command(description="Browse Codex's commands by category.")
+    async def help(self, interaction: discord.Interaction) -> None:
+        pages = self._help_pages()
+        if not pages:
+            await interaction.response.send_message("No commands are loaded.", ephemeral=True)
+            return
+        view = HelpView(pages)
+        await interaction.response.send_message(embed=view.render(), view=view, ephemeral=True)
+        view.message = await interaction.original_response()
 
 
 async def setup(bot: commands.Bot) -> None:
