@@ -10,6 +10,31 @@ from discord.ext import commands
 
 import config
 
+# Cog class name → the section it appears under in /help, in display order.
+# Cogs not listed here still show up (under their own name) so new ones aren't
+# silently dropped.
+_HELP_CATEGORIES: tuple[tuple[str, str], ...] = (
+    ("General", "🧭 General"),
+    ("AI", "🤖 AI"),
+    ("Study", "📚 Study"),
+    ("Social", "📈 Leveling"),
+    ("Roles", "🎭 Roles"),
+    ("Gaming", "🎮 Gaming"),
+    ("Music", "🎵 Music"),
+    ("Moderation", "🛡️ Moderation"),
+    ("AutoMod", "🚔 AutoMod & logging"),
+    ("Premium", "✨ Premium"),
+    ("Components", "🧩 Components"),
+)
+
+
+def _format_entry(command: app_commands.Command | app_commands.Group) -> str:
+    """One help line: a group lists its subcommands, a command its description."""
+    if isinstance(command, app_commands.Group):
+        subs = " · ".join(sub.name for sub in command.commands)
+        return f"`/{command.name}` — {subs}"
+    return f"`/{command.name}` — {command.description}"
+
 
 class General(commands.Cog):
     """Everyday utility commands."""
@@ -64,19 +89,39 @@ class General(commands.Cog):
         embed.add_field(name=f"Roles ({len(roles)})", value=" ".join(roles) or "None", inline=False)
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(description="List Codex's commands.")
+    @app_commands.command(description="List Codex's commands by category.")
     async def help(self, interaction: discord.Interaction) -> None:
         embed = discord.Embed(
             title="Codex — Command Help",
-            description="Codex is modular. Currently loaded commands:",
+            description="Commands grouped by feature. Groups show their subcommands.",
             color=config.COLOR,
         )
-        commands_ = sorted(
-            (c for c in self.bot.tree.get_commands() if isinstance(c, app_commands.Command)),
-            key=lambda c: c.name,
-        )
-        for cmd in commands_:
-            embed.add_field(name=f"/{cmd.name}", value=cmd.description or "—", inline=False)
+
+        def add_section(label: str, cog: commands.Cog) -> None:
+            cmds = sorted(cog.get_app_commands(), key=lambda c: c.name)
+            if cmds:
+                value = "\n".join(_format_entry(c) for c in cmds)
+                embed.add_field(name=label, value=value[:1024], inline=False)
+
+        shown = set()
+        for cog_name, label in _HELP_CATEGORIES:
+            cog = self.bot.get_cog(cog_name)
+            if cog is not None:
+                shown.add(cog_name)
+                add_section(label, cog)
+        # Any cog not in the category map (e.g. one added later).
+        for cog_name, cog in sorted(self.bot.cogs.items()):
+            if cog_name not in shown:
+                add_section(f"📦 {cog_name}", cog)
+
+        # Right-click (context menu) commands live on the tree, not in a cog.
+        menus = self.bot.tree.get_commands(
+            type=discord.AppCommandType.user
+        ) + self.bot.tree.get_commands(type=discord.AppCommandType.message)
+        if menus:
+            lines = [f"`{m.name}` (right-click)" for m in sorted(menus, key=lambda m: m.name)]
+            embed.add_field(name="🖱️ Context menus", value="\n".join(lines), inline=False)
+
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
