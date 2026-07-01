@@ -309,6 +309,10 @@ of the runner's user. If your clone lives elsewhere, set a repository variable
 That's it. Merge a PR → CI runs → on success the runner does
 `git reset --hard origin/main && docker compose up -d --build` on the NAS.
 
+**Redeploy on demand:** the workflow also has a **Run workflow** button —
+**Actions → Deploy to NAS → Run workflow** — to rebuild current `main` without
+pushing a commit (handy after editing `.env` on the NAS).
+
 > ⚠️ **Public-repo note.** GitHub advises care with self-hosted runners on public
 > repos, because fork PRs can run code on your runner. This setup avoids that: CI
 > runs on GitHub-hosted runners, and the deploy triggers **only** after CI succeeds
