@@ -13,15 +13,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# FFmpeg is the audio backend for the music cog (PyNaCl + yt-dlp come from pip).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first so this layer stays cached when only code changes.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# When you add the music cog later, uncomment to install voice support:
-#   RUN apt-get update \
-#     && apt-get install -y --no-install-recommends ffmpeg \
-#     && rm -rf /var/lib/apt/lists/*
-#   (and add PyNaCl to requirements.txt)
 
 # Copy only the runtime code (everything else is excluded via .dockerignore).
 COPY bot.py config.py ./

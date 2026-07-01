@@ -26,8 +26,9 @@ surfaces, so you can confirm everything works before piling on features:
 | `roles`        | Button self-assign roles (persistent) + auto level-up roles                  |
 | `gaming`       | Native `/poll`, `/roll` dice, `/trivia`, `/lfg` board                        |
 | `automod`      | Native AutoMod rule management + an audit **mod-log** (`/automod`, `/logging`)|
+| `music`        | Voice playback via yt-dlp + FFmpeg (`/music play`, queue, volume, …)         |
 
-27 slash commands + 2 context menus, all verified to load.
+28 slash commands + 2 context menus, all verified to load.
 
 ---
 
@@ -51,6 +52,10 @@ python bot.py
 > **Python 3.14 note:** discord.py needs the `audioop` module for voice, which was removed
 > from the standard library in Python 3.13. The `audioop-lts` package restores it and is
 > pulled in automatically as a dependency — no action needed.
+
+> **Music note:** the `music` cog streams audio through **FFmpeg**, which must be installed
+> and on your `PATH` (`sudo apt install ffmpeg`, `brew install ffmpeg`, …). The Docker image
+> installs it for you. `PyNaCl` and `yt-dlp` come from `requirements.txt`.
 
 ---
 
@@ -169,7 +174,7 @@ where each piece lives (✅ built, 🔜 on the roadmap):
 | **Reaction roles** / self-assign roles  | `roles` — button panel + auto level roles          | ✅ |
 | **AutoMod** rule management             | `automod` — `/automod` keyword/preset/mention rules| ✅ |
 | **Audit log** streaming                 | `automod` — `/logging` → mod-log channel           | ✅ |
-| **Voice / music**                       | `music` (needs FFmpeg + a voice source)           | 🔜 |
+| **Voice / music**                       | `music` — `/music play` (yt-dlp + FFmpeg)          | ✅ |
 | **Scheduled Events** (study sessions)   | `events` extension                                 | 🔜 |
 | **Webhooks** (announcements/feeds)      | `webhooks`                                          | 🔜 |
 | **Application Emojis**                  | branding / reactions                               | 🔜 |
@@ -199,7 +204,8 @@ codex-bot/
     ├── study.py        # pomodoro, reminders, flashcards
     ├── roles.py        # self-assign + level roles
     ├── gaming.py       # polls, dice, trivia, LFG
-    └── automod.py      # AutoMod rules + mod-log
+    ├── automod.py      # AutoMod rules + mod-log
+    └── music.py        # voice playback (yt-dlp + FFmpeg)
 ```
 
 **Adding a feature** = drop a new file in `cogs/`, write a `Cog` subclass with an
@@ -277,7 +283,7 @@ updates.
 3. ✅ **`roles`** — reaction/button self-assign roles + automatic level roles.
 4. ✅ **`gaming`** — native polls, dice, trivia, and an LFG "looking for group" board.
 5. ✅ **`automod` / `logging`** — AutoMod rules and an audit-log mod channel.
-6. 🔜 **`music`** — voice playback (FFmpeg + yt-dlp).
+6. ✅ **`music`** — voice playback (FFmpeg + yt-dlp).
 7. 🔜 **`premium`** — App Subscriptions for a public-release tier.
 
 Each is an isolated cog, so you can build and test them one at a time.
