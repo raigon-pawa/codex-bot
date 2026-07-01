@@ -1,5 +1,7 @@
 # ── Core ──────────────────────────────────────────────────
-discord.py>=2.7,<3
+# The [voice] extra pulls PyNaCl + davey, both required by discord.py 2.7's
+# voice stack (used by the music cog).
+discord.py[voice]>=2.7,<3
 python-dotenv>=1.0
 aiosqlite>=0.20
 
@@ -8,6 +10,6 @@ aiosqlite>=0.20
 anthropic>=0.40
 
 # ── Optional: Music cog (voice playback) ──────────────────
-# Also needs the FFmpeg binary available at runtime (installed in the Dockerfile).
-PyNaCl>=1.5      # voice packet encryption for discord.py
+# Voice libs (PyNaCl + davey) come from discord.py[voice] above. This also needs
+# the FFmpeg binary available at runtime (installed in the Dockerfile).
 yt-dlp>=2024.8   # resolve & stream audio sources

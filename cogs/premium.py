@@ -62,10 +62,12 @@ class Premium(commands.Cog):
             for ent in interaction.entitlements
         )
 
-    def _upgrade_prompt(self, description: str) -> tuple[discord.Embed, UpgradeView | None]:
+    def _upgrade_prompt(self, description: str) -> tuple[discord.Embed, UpgradeView]:
         embed = discord.Embed(title="✨ Codex Premium", description=description, color=_GOLD)
         if config.PREMIUM_SKU_ID is None:
-            return embed, None
+            # MISSING (not None) so send_message omits the view — passing None
+            # makes discord.py call None.is_finished() and crash.
+            return embed, discord.utils.MISSING
         return embed, UpgradeView(config.PREMIUM_SKU_ID)
 
     # ── Commands ──────────────────────────────────────────────
