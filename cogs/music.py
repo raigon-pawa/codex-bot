@@ -5,8 +5,11 @@ then streams the audio through FFmpeg into the caller's voice channel. Each
 guild gets its own queue; tracks auto-advance, volume is adjustable live, and
 the bot leaves on its own once it's been idle or left alone.
 
-Runtime needs: the **FFmpeg** binary on PATH and **PyNaCl** for voice
-encryption (both provided by the Docker image / requirements.txt).
+The Now Playing message carries a live seekbar plus a control panel (seek ±15s,
+pause/resume, skip, volume). Interactive seeking re-spawns FFmpeg with `-ss`.
+
+Runtime needs: the **FFmpeg** binary on PATH and **PyNaCl + davey** for voice
+(installed via discord.py[voice] / the Docker image).
 """
 
 from __future__ import annotations
@@ -44,6 +47,8 @@ FFMPEG_OPTIONS = {
 
 IDLE_TIMEOUT = 180  # seconds to linger while idle or alone before disconnecting
 SEEKBAR_INTERVAL = 12  # seconds between live progress-bar edits
+SEEK_STEP = 15  # seconds the ⏪/⏩ buttons jump
+VOLUME_STEP = 0.1  # fraction the 🔉/🔊 buttons change
 _BAR_WIDTH = 18  # cells in the rendered seekbar
 
 
@@ -110,7 +115,94 @@ class GuildMusic:
     text_channel: discord.abc.Messageable | None = None
     idle_task: asyncio.Task | None = None
     np_message: discord.Message | None = None  # the live "Now playing" message
+    np_view: PlayerControls | None = None  # its control buttons
     np_task: asyncio.Task | None = None  # loop editing the seekbar
+    seek_to: float | None = None  # pending seek position (consumed by the after-hook)
+
+
+class PlayerControls(discord.ui.View):
+    """Buttons under the Now Playing message: seek ±15s, pause/resume, skip, volume.
+
+    Only members in the bot's voice channel may use them, and only on the newest
+    Now Playing message (older ones have their controls stripped on track change).
+    """
+
+    def __init__(self, cog: Music, guild_id: int, *, seekable: bool) -> None:
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.guild_id = guild_id
+        if not seekable:  # live streams have no position to seek within
+            self.rewind.disabled = True
+            self.forward.disabled = True
+
+    @discord.ui.button(emoji="⏪", style=discord.ButtonStyle.secondary, row=0)
+    async def rewind(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        pre = await self.cog.control_precheck(interaction)
+        if pre is None:
+            return
+        state, vc = pre
+        elapsed = state.source.elapsed if state.source else 0.0
+        await interaction.response.defer()
+        self.cog.request_seek(vc.guild, max(0.0, elapsed - SEEK_STEP))
+
+    @discord.ui.button(emoji="⏯️", style=discord.ButtonStyle.primary, row=0)
+    async def toggle(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        pre = await self.cog.control_precheck(interaction)
+        if pre is None:
+            return
+        state, vc = pre
+        if vc.is_paused():
+            vc.resume()
+        elif vc.is_playing():
+            vc.pause()
+        await interaction.response.edit_message(
+            embed=self.cog.now_playing_embed(state, paused=vc.is_paused())
+        )
+
+    @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary, row=0)
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        pre = await self.cog.control_precheck(interaction)
+        if pre is None:
+            return
+        _state, vc = pre
+        await interaction.response.defer()
+        vc.stop()  # after-hook advances the queue
+
+    @discord.ui.button(emoji="⏩", style=discord.ButtonStyle.secondary, row=0)
+    async def forward(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        pre = await self.cog.control_precheck(interaction)
+        if pre is None:
+            return
+        state, vc = pre
+        elapsed = state.source.elapsed if state.source else 0.0
+        total = state.current.duration if state.current else 0
+        target = elapsed + SEEK_STEP
+        if total:
+            target = min(target, max(0.0, total - 1))
+        await interaction.response.defer()
+        self.cog.request_seek(vc.guild, target)
+
+    @discord.ui.button(emoji="🔉", style=discord.ButtonStyle.secondary, row=1)
+    async def volume_down(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        await self._change_volume(interaction, -VOLUME_STEP)
+
+    @discord.ui.button(emoji="🔊", style=discord.ButtonStyle.secondary, row=1)
+    async def volume_up(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await self._change_volume(interaction, VOLUME_STEP)
+
+    async def _change_volume(self, interaction: discord.Interaction, delta: float) -> None:
+        pre = await self.cog.control_precheck(interaction)
+        if pre is None:
+            return
+        state, vc = pre
+        state.volume = round(min(1.0, max(0.0, state.volume + delta)), 2)
+        if state.source is not None:
+            state.source.volume = state.volume
+        await interaction.response.edit_message(
+            embed=self.cog.now_playing_embed(state, paused=vc.is_paused())
+        )
 
 
 class Music(commands.Cog):
@@ -128,6 +220,8 @@ class Music(commands.Cog):
                 state.idle_task.cancel()
             if state.np_task and not state.np_task.done():
                 state.np_task.cancel()
+            if state.np_view is not None:
+                state.np_view.stop()
         for vc in list(self.bot.voice_clients):
             with contextlib.suppress(Exception):
                 await vc.disconnect(force=True)
@@ -158,6 +252,13 @@ class Music(commands.Cog):
 
     def _play_next(self, guild: discord.Guild, error: Exception | None = None) -> None:
         """FFmpeg's `after` hook — runs in a worker thread, so hop back to the loop."""
+        state = self.states.get(guild.id)
+        if state is not None and state.seek_to is not None:
+            position = state.seek_to
+            state.seek_to = None
+            # A seek is pending: replay the SAME track at the new spot, don't advance.
+            asyncio.run_coroutine_threadsafe(self._start_at(guild, position), self.bot.loop)
+            return
         if error:
             log.error("Playback error in guild %s: %s", guild.id, error)
         asyncio.run_coroutine_threadsafe(self._advance(guild), self.bot.loop)
@@ -167,7 +268,7 @@ class Music(commands.Cog):
         vc = guild.voice_client
         if state is None or not isinstance(vc, discord.VoiceClient):
             return
-        self._stop_seekbar(state)  # the previous track's live bar is done
+        await self._teardown_player(state)  # finalize the previous track's player
         if not state.queue:
             state.current = None
             state.source = None
@@ -187,8 +288,32 @@ class Music(commands.Cog):
         vc.play(state.source, after=lambda e: self._play_next(guild, e))
         if announce and state.text_channel is not None:
             with contextlib.suppress(discord.HTTPException):
-                message = await state.text_channel.send(embed=self._now_playing_embed(state))
-                self._begin_seekbar(guild, message)
+                view = PlayerControls(self, guild.id, seekable=bool(track.duration))
+                message = await state.text_channel.send(
+                    embed=self.now_playing_embed(state), view=view
+                )
+                self._start_player(guild, message, view)
+
+    async def _start_at(self, guild: discord.Guild, position: float) -> None:
+        """Restart the current track at `position` seconds (interactive seek)."""
+        state = self.states.get(guild.id)
+        vc = guild.voice_client
+        if state is None or state.current is None or not isinstance(vc, discord.VoiceClient):
+            return
+        options = {
+            "before_options": FFMPEG_OPTIONS["before_options"] + f" -ss {position:.2f}",
+            "options": "-vn",
+        }
+        try:
+            audio = discord.FFmpegPCMAudio(state.current.stream_url, **options)
+        except Exception:
+            log.exception("Failed to seek in %s", state.current.title)
+            return
+        source = TrackedAudio(audio, state.volume)
+        source.frames = int(position / 0.02)  # so the seekbar shows the new position
+        state.source = source
+        vc.play(source, after=lambda e: self._play_next(guild, e))
+        await self._refresh_np(guild, paused=False)
 
     def _schedule_idle_leave(self, guild: discord.Guild) -> None:
         state = self.states.get(guild.id)
@@ -210,20 +335,29 @@ class Music(commands.Cog):
             await vc.disconnect()
             self.states.pop(guild.id, None)
 
-    # ── Live seekbar ──────────────────────────────────────────
-    def _begin_seekbar(self, guild: discord.Guild, message: discord.Message) -> None:
+    # ── Live seekbar & player message ─────────────────────────
+    def _start_player(
+        self, guild: discord.Guild, message: discord.Message, view: PlayerControls
+    ) -> None:
         state = self.states.get(guild.id)
         if state is None:
             return
-        self._stop_seekbar(state)
         state.np_message = message
+        state.np_view = view
         state.np_task = self.bot.loop.create_task(self._seekbar_loop(guild))
 
-    def _stop_seekbar(self, state: GuildMusic) -> None:
+    async def _teardown_player(self, state: GuildMusic) -> None:
+        """Stop the seekbar loop and strip controls off the old Now Playing message."""
         if state.np_task and not state.np_task.done():
             state.np_task.cancel()
         state.np_task = None
+        if state.np_view is not None:
+            state.np_view.stop()
+        if state.np_message is not None:
+            with contextlib.suppress(discord.HTTPException):
+                await state.np_message.edit(view=None)
         state.np_message = None
+        state.np_view = None
 
     async def _seekbar_loop(self, guild: discord.Guild) -> None:
         """Refresh the Now Playing message so the bar tracks playback live."""
@@ -242,7 +376,7 @@ class Music(commands.Cog):
                     return
                 try:
                     await state.np_message.edit(
-                        embed=self._now_playing_embed(state, paused=vc.is_paused())
+                        embed=self.now_playing_embed(state, paused=vc.is_paused())
                     )
                 except discord.NotFound:
                     return  # message was deleted; stop editing
@@ -250,14 +384,14 @@ class Music(commands.Cog):
                     pass
 
     async def _refresh_np(self, guild: discord.Guild, *, paused: bool) -> None:
-        """Immediately redraw the Now Playing message (e.g. on pause/resume)."""
+        """Immediately redraw the Now Playing message (e.g. on pause/resume/seek)."""
         state = self.states.get(guild.id)
         if state is None or state.np_message is None or state.current is None:
             return
         with contextlib.suppress(discord.HTTPException):
-            await state.np_message.edit(embed=self._now_playing_embed(state, paused=paused))
+            await state.np_message.edit(embed=self.now_playing_embed(state, paused=paused))
 
-    def _now_playing_embed(self, state: GuildMusic, *, paused: bool = False) -> discord.Embed:
+    def now_playing_embed(self, state: GuildMusic, *, paused: bool = False) -> discord.Embed:
         track = state.current
         assert track is not None
         elapsed = state.source.elapsed if state.source is not None else 0.0
@@ -270,6 +404,47 @@ class Music(commands.Cog):
         embed.add_field(name="Requested by", value=f"<@{track.requester_id}>")
         embed.add_field(name="Volume", value=f"{int(state.volume * 100)}%")
         return embed
+
+    # ── Control-panel helpers (called by PlayerControls) ──────
+    async def control_precheck(
+        self, interaction: discord.Interaction
+    ) -> tuple[GuildMusic, discord.VoiceClient] | None:
+        """Validate a control-button click; respond + return None if it's not allowed."""
+        guild = interaction.guild
+        state = self.states.get(guild.id) if guild else None
+        vc = guild.voice_client if guild else None
+        if state is None or state.current is None or not isinstance(vc, discord.VoiceClient):
+            await interaction.response.send_message("Nothing is playing.", ephemeral=True)
+            return None
+        user = interaction.user
+        if (
+            not isinstance(user, discord.Member)
+            or user.voice is None
+            or user.voice.channel != vc.channel
+        ):
+            await interaction.response.send_message(
+                "Join my voice channel to control playback.", ephemeral=True
+            )
+            return None
+        if (
+            state.np_message is None
+            or interaction.message is None
+            or interaction.message.id != state.np_message.id
+        ):
+            await interaction.response.send_message(
+                "This player is out of date — use the newest Now Playing message.", ephemeral=True
+            )
+            return None
+        return state, vc
+
+    def request_seek(self, guild: discord.Guild, position: float) -> None:
+        """Ask the after-hook to replay the current track at `position`."""
+        state = self.states.get(guild.id)
+        vc = guild.voice_client
+        if state is None or state.current is None or not isinstance(vc, discord.VoiceClient):
+            return
+        state.seek_to = position
+        vc.stop()  # after-hook sees seek_to and calls _start_at
 
     # ── Commands ──────────────────────────────────────────────
     @music.command(name="play", description="Play a track from a URL or search text.")
@@ -322,10 +497,12 @@ class Music(commands.Cog):
         state.queue.append(track)
         if not vc.is_playing() and state.current is None:
             await self._advance(guild, announce=False)
+            seekable = bool(state.current.duration) if state.current else False
+            view = PlayerControls(self, guild.id, seekable=seekable)
             message = await interaction.followup.send(
-                embed=self._now_playing_embed(state), wait=True
+                embed=self.now_playing_embed(state), view=view, wait=True
             )
-            self._begin_seekbar(guild, message)
+            self._start_player(guild, message, view)
         else:
             await interaction.followup.send(
                 f"✅ Queued **{track.title}** — position {len(state.queue)}."
@@ -371,7 +548,7 @@ class Music(commands.Cog):
         state = self.states.get(guild.id)
         if state is not None:
             state.queue.clear()
-            self._stop_seekbar(state)
+            await self._teardown_player(state)
         vc = guild.voice_client
         if isinstance(vc, discord.VoiceClient) and (vc.is_playing() or vc.is_paused()):
             vc.stop()
@@ -387,7 +564,7 @@ class Music(commands.Cog):
             return
         state = self.states.get(guild.id)
         if state is not None:
-            self._stop_seekbar(state)
+            await self._teardown_player(state)
         await vc.disconnect()
         self.states.pop(guild.id, None)
         await interaction.response.send_message("👋 Left the voice channel.")
@@ -421,7 +598,7 @@ class Music(commands.Cog):
             return
         vc = guild.voice_client
         paused = isinstance(vc, discord.VoiceClient) and vc.is_paused()
-        await interaction.response.send_message(embed=self._now_playing_embed(state, paused=paused))
+        await interaction.response.send_message(embed=self.now_playing_embed(state, paused=paused))
 
     @music.command(name="volume", description="Set the playback volume (0-100).")
     @app_commands.describe(level="Volume percentage from 0 to 100")
