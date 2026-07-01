@@ -6,3 +6,8 @@ aiosqlite>=0.20
 # ── Optional: AI assistance cog (Claude / Anthropic) ──────
 # Uncomment to enable the /ask & /summarize commands.
 anthropic>=0.40
+
+# ── Optional: Music cog (voice playback) ──────────────────
+# Also needs the FFmpeg binary available at runtime (installed in the Dockerfile).
+PyNaCl>=1.5      # voice packet encryption for discord.py
+yt-dlp>=2024.8   # resolve & stream audio sources

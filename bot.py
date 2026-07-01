@@ -27,6 +27,7 @@ INITIAL_EXTENSIONS = (
     "cogs.roles",
     "cogs.gaming",
     "cogs.automod",
+    "cogs.music",
 )
 
 

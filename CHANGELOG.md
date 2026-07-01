@@ -27,12 +27,19 @@ All notable changes to Codex are documented here. The format is based on
   keyword|preset|mentions|list|remove`) and stream moderation events (message
   edits/deletes, joins/leaves, bans, and AutoMod hits) to a mod-log channel via
   `/logging set|disable|status`. AutoMod alerts route to the same channel.
+- `music` cog — voice playback with a per-guild queue: `/music play` (URL or
+  search via yt-dlp), plus `skip`, `pause`, `resume`, `stop`, `queue`,
+  `nowplaying`, `volume`, and `leave`. Streams through FFmpeg with live volume
+  control and auto-leaves when idle or left alone.
 
 ### Changed
 - Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise
   cost; set `AI_MODEL=claude-opus-4-8` for top quality.
 - Docker self-hosting: `Dockerfile`, hardened `docker-compose.yml`, and a
-  "Self-hosting with Docker" guide in the README.
+  "Self-hosting with Docker" guide in the README. The image now bundles **FFmpeg**
+  for the music cog.
+- Added `PyNaCl` (voice encryption) and `yt-dlp` (audio resolution) to
+  `requirements.txt`.
 
 ## [0.1.0] — 2026-07-01
 
