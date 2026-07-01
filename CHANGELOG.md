@@ -17,6 +17,15 @@ All notable changes to Codex are documented here. The format is based on
   `/music`, `/automod`, `/premium`) and **context menus** — the old flat list
   showed only standalone commands, silently omitting every group.
 
+### Fixed
+- **Music voice crash** — `/music play` failed with `davey library needed in
+  order to use voice`. discord.py 2.7's voice stack needs both PyNaCl **and**
+  `davey`; switched to the `discord.py[voice]` extra so both are installed.
+- **`/premium` crash** — `/premium exclusive` (and `status`) raised
+  `NoneType has no attribute 'is_finished'` when `PREMIUM_SKU_ID` was unset;
+  the upgrade prompt now uses discord's `MISSING` sentinel instead of `None`
+  for the (absent) view.
+
 ## [1.0.0] — 2026-07-01
 
 The first stable release: every cog on the roadmap shipped — 29 slash commands
