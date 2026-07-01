@@ -6,6 +6,12 @@ All notable changes to Codex are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-01
+
+The first stable release: every cog on the roadmap shipped — 29 slash commands
+and 2 context menus across AI, study, roles, gaming, moderation/AutoMod, music,
+and a premium tier.
+
 ### Added
 - `ai` cog — Claude-powered `/ask`, `/chat`, `/summarize`, built on the async
   Anthropic client with per-user cooldowns.
@@ -61,5 +67,6 @@ The first runnable foundation.
 - Developer Portal setup guide and feature map in the README.
 - CI pipeline (ruff lint + format, cog-load smoke test) and contributor docs.
 
-[Unreleased]: https://github.com/raigon-pawa/codex-bot/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/raigon-pawa/codex-bot/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/raigon-pawa/codex-bot/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/raigon-pawa/codex-bot/releases/tag/v0.1.0
