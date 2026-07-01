@@ -6,6 +6,11 @@ All notable changes to Codex are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- `/help` now groups commands by category and lists command **groups** (e.g.
+  `/music`, `/automod`, `/premium`) and **context menus** — the old flat list
+  showed only standalone commands, silently omitting every group.
+
 ## [1.0.0] — 2026-07-01
 
 The first stable release: every cog on the roadmap shipped — 29 slash commands
