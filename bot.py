@@ -26,6 +26,7 @@ INITIAL_EXTENSIONS = (
     "cogs.study",
     "cogs.roles",
     "cogs.gaming",
+    "cogs.automod",
 )
 
 

@@ -23,6 +23,10 @@ All notable changes to Codex are documented here. The format is based on
 - `gaming` cog — native `/poll`, a `/roll` dice roller (NdM±K notation), `/trivia`
   (Open Trivia DB, multiple-choice answer buttons), and an `/lfg` board with
   Join/Leave buttons.
+- `automod` cog — manage Discord's native AutoMod from chat (`/automod
+  keyword|preset|mentions|list|remove`) and stream moderation events (message
+  edits/deletes, joins/leaves, bans, and AutoMod hits) to a mod-log channel via
+  `/logging set|disable|status`. AutoMod alerts route to the same channel.
 
 ### Changed
 - Default `AI_MODEL` is now `claude-haiku-4-5` (~5× cheaper than Opus) to minimise
