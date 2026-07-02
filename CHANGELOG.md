@@ -53,6 +53,9 @@ All notable changes to Codex are documented here. The format is based on
   Adds a `guild_config.prefix` column with a migration for existing databases.
 
 ### Fixed
+- **Default-prefix env collision** — the default prefix now reads `BOT_PREFIX`
+  first (`PREFIX` is a common *system* env var that could silently override it).
+  `PREFIX` is still honoured for backward compatibility.
 - **Music voice crash** — `/music play` failed with `davey library needed in
   order to use voice`. discord.py 2.7's voice stack needs both PyNaCl **and**
   `davey`; switched to the `discord.py[voice]` extra so both are installed.
