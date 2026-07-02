@@ -17,7 +17,7 @@ surfaces, so you can confirm everything works before piling on features:
 | Cog            | What it demonstrates                                                        |
 |----------------|-----------------------------------------------------------------------------|
 | `general`      | Hybrid commands — `/ping` **and** `!ping` (`serverinfo`, `userinfo`, `help`) |
-| `events`       | Gateway listeners + `members` intent (welcome / goodbye messages)           |
+| `events`       | Welcome / goodbye messages to a configurable channel (`members` intent)     |
 | `moderation`   | Permission-gated commands (`/kick`, `/ban`, `/timeout`, `/clear`)           |
 | `components`   | Buttons, select menus, modals, **and** user/message context menus           |
 | `social`       | XP & levels with SQLite persistence (`/rank`, `/leaderboard`)               |
@@ -29,7 +29,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `music`        | Voice playback via yt-dlp + FFmpeg (`/music play`, queue, volume, …)         |
 | `premium`      | App Subscriptions — SKU/entitlement-gated perks (`/premium`)                 |
 | `owner`        | Owner-only prefix commands — `!sync` (global / guild / clear)                |
-| `settings`     | Per-server config — `/prefix show \| set \| reset`                            |
+| `settings`     | Per-server config — `/prefix` and `/welcome` (channel + on/off)             |
 
 29 slash commands + 2 context menus, all verified to load.
 

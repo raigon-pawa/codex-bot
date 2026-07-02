@@ -19,11 +19,20 @@ from core.database import init_db
 _MAX_PREFIX_LEN = 5
 
 
+_MANAGE_GUILD = discord.Permissions(manage_guild=True)
+
+
 class Settings(commands.Cog):
     prefix = app_commands.Group(
         name="prefix",
         description="View or change this server's command prefix.",
         guild_only=True,
+    )
+    welcome = app_commands.Group(
+        name="welcome",
+        description="Configure welcome/goodbye messages.",
+        guild_only=True,
+        default_permissions=_MANAGE_GUILD,
     )
 
     def __init__(self, bot: commands.Bot) -> None:
@@ -85,6 +94,58 @@ class Settings(commands.Cog):
         await interaction.response.send_message(
             f"↩️ Prefix reset to the default **`{config.PREFIX}`**.", ephemeral=True
         )
+
+    # ── Welcome / goodbye channel ─────────────────────────────
+    async def _set_welcome(self, guild_id: int, value: int | None) -> None:
+        async with aiosqlite.connect(config.DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO guild_config (guild_id, welcome_channel) VALUES (?,?) "
+                "ON CONFLICT(guild_id) DO UPDATE SET welcome_channel=excluded.welcome_channel",
+                (guild_id, value),
+            )
+            await db.commit()
+
+    @welcome.command(name="set", description="Send welcome/goodbye messages to a channel.")
+    @app_commands.describe(channel="Where join/leave messages should post")
+    async def welcome_set(
+        self, interaction: discord.Interaction, channel: discord.TextChannel
+    ) -> None:
+        guild = interaction.guild
+        assert guild is not None
+        if not channel.permissions_for(guild.me).send_messages:
+            await interaction.response.send_message(
+                f"I can't send messages in {channel.mention} — grant me access there first.",
+                ephemeral=True,
+            )
+            return
+        await self._set_welcome(guild.id, channel.id)
+        await interaction.response.send_message(
+            f"👋 Welcome & goodbye messages will post in {channel.mention}.", ephemeral=True
+        )
+
+    @welcome.command(name="disable", description="Turn off welcome/goodbye messages.")
+    async def welcome_disable(self, interaction: discord.Interaction) -> None:
+        await self._set_welcome(interaction.guild_id, 0)  # type: ignore[arg-type]
+        await interaction.response.send_message(
+            "🔕 Welcome & goodbye messages are now off.", ephemeral=True
+        )
+
+    @welcome.command(name="status", description="Show the welcome-message setting.")
+    async def welcome_status(self, interaction: discord.Interaction) -> None:
+        async with aiosqlite.connect(config.DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT welcome_channel FROM guild_config WHERE guild_id=?",
+                (interaction.guild_id,),
+            )
+            row = await cursor.fetchone()
+        configured = row[0] if row else None
+        if configured == 0:
+            text = "Welcome/goodbye messages are **off**."
+        elif configured:
+            text = f"Posting welcome/goodbye messages in <#{configured}>."
+        else:
+            text = "Using the server's **System Channel** (default)."
+        await interaction.response.send_message(text, ephemeral=True)
 
     async def cog_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError

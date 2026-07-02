@@ -7,6 +7,10 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Configurable welcome/goodbye channel** — `/welcome set|disable|status`
+  (Manage Server). Join/leave messages post to the chosen channel, fall back to
+  the System Channel by default, and can be turned off. This finally uses the
+  `guild_config.welcome_channel` column that had been defined but unused.
 - **Expanded test suite** — beyond the load smoke test, added unit tests for
   duration parsing, the XP curve, dice notation, seekbar formatting, the
   `guild_config.prefix` migration, and per-guild prefix resolution (1 → 20 tests).
