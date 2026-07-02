@@ -7,11 +7,15 @@ The PanelView uses `timeout=None` + `custom_id`s and is registered with
 
 from __future__ import annotations
 
+import contextlib
+
+import aiosqlite
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 import config
+from core.database import init_db
 
 
 class FeedbackModal(discord.ui.Modal, title="Send Feedback to Codex"):
@@ -76,6 +80,26 @@ class Components(commands.Cog):
         bot.tree.add_command(self.ctx_avatar)
         bot.tree.add_command(self.ctx_report)
 
+    async def cog_load(self) -> None:
+        await init_db()
+
+    async def _mod_log(self, guild: discord.Guild) -> discord.TextChannel | None:
+        """The mod-log channel set via `/logging set`, if any and writable."""
+        async with aiosqlite.connect(config.DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT log_channel FROM guild_config WHERE guild_id=?", (guild.id,)
+            )
+            row = await cursor.fetchone()
+        channel_id = row[0] if row else None
+        if channel_id:
+            channel = guild.get_channel(channel_id)
+            if (
+                isinstance(channel, discord.TextChannel)
+                and channel.permissions_for(guild.me).send_messages
+            ):
+                return channel
+        return None
+
     async def cog_unload(self) -> None:
         self.bot.tree.remove_command(self.ctx_avatar.name, type=self.ctx_avatar.type)
         self.bot.tree.remove_command(self.ctx_report.name, type=self.ctx_report.type)
@@ -96,8 +120,30 @@ class Components(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def report_ctx(self, interaction: discord.Interaction, message: discord.Message) -> None:
+        guild = interaction.guild
+        channel = await self._mod_log(guild) if guild is not None else None
+        if channel is None:
+            await interaction.response.send_message(
+                "Thanks for the report — but no mod-log channel is set. "
+                "An admin can add one with `/logging set`.",
+                ephemeral=True,
+            )
+            return
+        embed = discord.Embed(
+            title="🚩 Message reported",
+            description=message.content[:2048] or "*(no text content)*",
+            color=discord.Color.orange(),
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.set_author(name=str(message.author), icon_url=message.author.display_avatar.url)
+        embed.add_field(name="Reported by", value=interaction.user.mention)
+        embed.add_field(name="Channel", value=message.channel.mention)
+        embed.add_field(name="Message", value=f"[Jump]({message.jump_url})", inline=False)
+        embed.set_footer(text=f"Author ID: {message.author.id}")
+        with contextlib.suppress(discord.HTTPException):
+            await channel.send(embed=embed)
         await interaction.response.send_message(
-            f"Reported message by **{message.author}** to the moderators. 🛡️", ephemeral=True
+            "🛡️ Reported to the moderators — thanks.", ephemeral=True
         )
 
 
