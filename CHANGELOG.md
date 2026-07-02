@@ -21,6 +21,10 @@ All notable changes to Codex are documented here. The format is based on
   "Run workflow" button to redeploy current `main` on demand.
 
 ### Changed
+- **Info commands are now hybrid** — `ping`, `help`, `serverinfo`, `userinfo`,
+  `rank`, and `leaderboard` work as **both** slash (`/ping`) and prefix (`!ping`)
+  commands, so the common ones don't need the slash UI. The paginated `/help`
+  view is now locked to the invoker (it can post publicly as `!help`).
 - **Commands now sync globally on startup** so every server Codex joins gets them.
   Previously, setting `DEV_GUILD_ID` synced to that one server only, so new servers
   showed no commands. `DEV_GUILD_ID` is now legacy/unused.
