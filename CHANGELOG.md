@@ -28,6 +28,10 @@ All notable changes to Codex are documented here. The format is based on
   "Run workflow" button to redeploy current `main` on demand.
 
 ### Changed
+- **"Report Message" now actually reports** — the right-click context menu posts
+  an embed (reporter, author, channel, jump link) to the mod-log channel set with
+  `/logging set`, instead of the previous no-op acknowledgement. Falls back to a
+  helpful note when no mod-log is configured.
 - **Info commands are now hybrid** — `ping`, `help`, `serverinfo`, `userinfo`,
   `rank`, and `leaderboard` work as **both** slash (`/ping`) and prefix (`!ping`)
   commands, so the common ones don't need the slash UI. The paginated `/help`
