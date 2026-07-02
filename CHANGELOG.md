@@ -6,74 +6,55 @@ All notable changes to Codex are documented here. The format is based on
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-02
+
+Post-1.0 polish and hardening: per-server settings, a full music control panel
+with interactive seeking, real test coverage, several fixes, and container health.
+
 ### Added
-- **Docker healthcheck** — the bot writes a heartbeat every 30s and a
-  `healthcheck.py` probe reports the container `unhealthy` if it goes stale
-  (wedged loop) or never appears (failed startup). New optional `HEALTH_FILE`.
-- **Ladder position in leveling** — `/rank` now shows your **#position** on the
-  server, and `/leaderboard` appends your own rank when you're outside the top 10.
-- **Cancel reminders** — `/reminders` now shows a dropdown to cancel a pending
-  reminder (previously you could list them but never remove one).
-- **Configurable welcome/goodbye channel** — `/welcome set|disable|status`
-  (Manage Server). Join/leave messages post to the chosen channel, fall back to
-  the System Channel by default, and can be turned off. This finally uses the
-  `guild_config.welcome_channel` column that had been defined but unused.
-- **Expanded test suite** — beyond the load smoke test, added unit tests for
-  duration parsing, the XP curve, dice notation, seekbar formatting, the
-  `guild_config.prefix` migration, and per-guild prefix resolution (1 → 20 tests).
-- **Live seekbar** in the music player — the Now Playing message shows a progress
-  bar (`0:42 ▬▬▬🔘▬▬▬ 3:15`) that updates as the track plays, freezes on pause,
-  and is also rendered on demand by `/music nowplaying`. Position is tracked by
-  counting audio frames, so it stays accurate without wall-clock drift.
 - **Player control panel** — buttons under the Now Playing message for seek −15s /
   pause-resume / skip / seek +15s / volume down / up. Interactive seeking restarts
-  FFmpeg at the new offset (`-ss`) without advancing the queue. Controls are limited
-  to members in the voice channel and to the newest player message.
-- Auto-deploy workflow (`.github/workflows/deploy.yml`): a self-hosted runner on
-  the NAS rebuilds Codex whenever `main` passes CI — outbound-only, no ports
-  exposed. Setup notes in the README. Also exposes a `workflow_dispatch`
-  "Run workflow" button to redeploy current `main` on demand.
-
-### Changed
-- **"Report Message" now actually reports** — the right-click context menu posts
-  an embed (reporter, author, channel, jump link) to the mod-log channel set with
-  `/logging set`, instead of the previous no-op acknowledgement. Falls back to a
-  helpful note when no mod-log is configured.
-- **Info commands are now hybrid** — `ping`, `help`, `serverinfo`, `userinfo`,
-  `rank`, and `leaderboard` work as **both** slash (`/ping`) and prefix (`!ping`)
-  commands, so the common ones don't need the slash UI. The paginated `/help`
-  view is now locked to the invoker (it can post publicly as `!help`).
-- **Commands now sync globally on startup** so every server Codex joins gets them.
-  Previously, setting `DEV_GUILD_ID` synced to that one server only, so new servers
-  showed no commands. `DEV_GUILD_ID` is now legacy/unused.
-- `/help` is now **paginated** — one category per page with Prev/Next buttons and
-  a jump dropdown (and a page counter). It lists command **groups** (e.g. `/music`,
-  `/automod`, `/premium`) and **context menus**, which the old flat list omitted.
-
-### Added
+  FFmpeg at the new offset (`-ss`) without advancing the queue; controls are
+  limited to members in the voice channel and to the newest player message.
+- **Live seekbar** — the Now Playing message shows a progress bar that updates as
+  the track plays (frame-counted, so no wall-clock drift), freezes on pause, and
+  is rendered on demand by `/music nowplaying`.
+- `settings` cog — **per-server prefix** (`/prefix show|set|reset`) and a
+  **configurable welcome/goodbye channel** (`/welcome set|disable|status`). Adds
+  `guild_config.prefix` with a migration for existing databases.
 - `owner` cog — an owner-only `!sync` prefix command (`!sync` global, `!sync guild`
   for instant per-server updates, `!sync clear` to drop a server's guild commands).
-  A prefix command works even before slash commands have synced to a server.
-- `settings` cog — **per-server prefix**: `/prefix show`, `/prefix set` (Manage
-  Server), and `/prefix reset`. The bot resolves each server's prefix from an
-  in-memory cache (no per-message DB hit); mentioning the bot always works too.
-  Adds a `guild_config.prefix` column with a migration for existing databases.
+- **Cancel reminders** — `/reminders` now has a dropdown to remove a pending one.
+- **Ladder position in leveling** — `/rank` shows your **#position**; `/leaderboard`
+  appends your own rank when you're outside the top 10.
+- **Auto-deploy workflow** (`.github/workflows/deploy.yml`) — a self-hosted runner
+  on the NAS rebuilds Codex whenever `main` passes CI (outbound-only), plus a
+  `workflow_dispatch` "Run workflow" button.
+- **Docker healthcheck** — a 30s heartbeat + `healthcheck.py` probe, so `docker ps`
+  shows `unhealthy` if the bot wedges or never connects. New optional `HEALTH_FILE`.
+- **Expanded test suite** (1 → 21) — duration parsing, the XP curve + rank position,
+  dice notation, seekbar formatting, the DB migration, and prefix resolution.
+
+### Changed
+- **Commands now sync globally on startup** so every server Codex joins gets them.
+  Previously `DEV_GUILD_ID` synced to that one server only (now legacy/unused).
+- `/help` is now **paginated** — one category per page with Prev/Next buttons, a
+  jump dropdown, and a page counter — and lists the command **groups** and
+  **context menus** the old flat list omitted.
+- **Info commands are now hybrid** — `ping`, `help`, `serverinfo`, `userinfo`,
+  `rank`, and `leaderboard` work as both slash (`/ping`) and prefix (`!ping`).
+- **"Report Message" now actually reports** — the context menu posts an embed to
+  the mod-log channel from `/logging set` instead of a no-op acknowledgement.
 
 ### Fixed
-- **Default-prefix env collision** — the default prefix now reads `BOT_PREFIX`
-  first (`PREFIX` is a common *system* env var that could silently override it).
-  `PREFIX` is still honoured for backward compatibility.
-- **Music voice crash** — `/music play` failed with `davey library needed in
-  order to use voice`. discord.py 2.7's voice stack needs both PyNaCl **and**
-  `davey`; switched to the `discord.py[voice]` extra so both are installed.
-- **`/premium` crash** — `/premium exclusive` (and `status`) raised
-  `NoneType has no attribute 'is_finished'` when `PREMIUM_SKU_ID` was unset;
-  the upgrade prompt now uses discord's `MISSING` sentinel instead of `None`
-  for the (absent) view.
-- **Seekbar stuck near the end** — a finished track left the bar a few seconds
-  short (the last live tick is up to 12s stale and yt-dlp's duration often runs
-  past the real audio). Naturally-ended tracks now finalize with a full bar and
-  a "✅ Finished" title; skips/stops don't falsely show as finished.
+- **Music voice crash** — `/music play` failed with `davey library needed in order
+  to use voice`; switched to the `discord.py[voice]` extra (PyNaCl **and** davey).
+- **Seekbar stuck near the end** — naturally-ended tracks now finalize with a full
+  bar and a "✅ Finished" title; skips/stops don't falsely show as finished.
+- **`/premium` crash** — the upgrade prompt used `None` for an absent view (raising
+  `NoneType has no attribute 'is_finished'`); now uses discord's `MISSING` sentinel.
+- **Default-prefix env collision** — the default prefix reads `BOT_PREFIX` first
+  (`PREFIX` is a common system env var); `PREFIX` still honoured for back-compat.
 
 ## [1.0.0] — 2026-07-01
 
@@ -136,6 +117,7 @@ The first runnable foundation.
 - Developer Portal setup guide and feature map in the README.
 - CI pipeline (ruff lint + format, cog-load smoke test) and contributor docs.
 
-[Unreleased]: https://github.com/raigon-pawa/codex-bot/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/raigon-pawa/codex-bot/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/raigon-pawa/codex-bot/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/raigon-pawa/codex-bot/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/raigon-pawa/codex-bot/releases/tag/v0.1.0
