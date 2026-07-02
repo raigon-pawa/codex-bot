@@ -39,7 +39,10 @@ ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 # AI_MODEL=claude-opus-4-8 (best quality) or claude-sonnet-4-6 (mid) to upgrade.
 AI_MODEL: str = os.getenv("AI_MODEL", "claude-haiku-4-5")
 AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", "1024"))
-PREFIX: str = os.getenv("PREFIX", "!")
+# Default text-command prefix (per-server override lives in guild_config.prefix).
+# Prefer BOT_PREFIX: the bare `PREFIX` name collides with a common *system* env
+# var (build tools, Termux, conda set it). PREFIX is still read for back-compat.
+PREFIX: str = os.getenv("BOT_PREFIX") or os.getenv("PREFIX") or "!"
 OWNER_IDS: set[int] = {int(x) for x in os.getenv("OWNER_IDS", "").split(",") if x.strip()}
 DB_PATH: str = os.getenv("DB_PATH", "data/codex.db")
 # SKU that represents the paid tier (Developer Portal → Monetization). When set,
