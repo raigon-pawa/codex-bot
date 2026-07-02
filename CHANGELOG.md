@@ -7,6 +7,9 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Expanded test suite** — beyond the load smoke test, added unit tests for
+  duration parsing, the XP curve, dice notation, seekbar formatting, the
+  `guild_config.prefix` migration, and per-guild prefix resolution (1 → 20 tests).
 - **Live seekbar** in the music player — the Now Playing message shows a progress
   bar (`0:42 ▬▬▬🔘▬▬▬ 3:15`) that updates as the track plays, freezes on pause,
   and is also rendered on demand by `/music nowplaying`. Position is tracked by
