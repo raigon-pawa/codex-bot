@@ -72,16 +72,16 @@ class Social(commands.Cog):
                 f"🎉 {message.author.mention} reached **level {level}**!", delete_after=15
             )
 
-    @app_commands.command(description="Show your (or someone's) level and XP.")
-    @app_commands.guild_only()
-    async def rank(
-        self, interaction: discord.Interaction, member: discord.Member | None = None
-    ) -> None:
-        member = member or interaction.user  # type: ignore[assignment]
+    @commands.hybrid_command(description="Show your (or someone's) level and XP.")
+    @app_commands.describe(member="Whose rank to show (defaults to you).")
+    @commands.guild_only()
+    async def rank(self, ctx: commands.Context, member: discord.Member | None = None) -> None:
+        assert ctx.guild is not None
+        member = member or ctx.author  # type: ignore[assignment]
         async with aiosqlite.connect(config.DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT xp, level FROM levels WHERE guild_id=? AND user_id=?",
-                (interaction.guild_id, member.id),
+                (ctx.guild.id, member.id),
             )
             row = await cursor.fetchone()
         xp, level = row if row else (0, 0)
@@ -89,22 +89,21 @@ class Social(commands.Cog):
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.add_field(name="Level", value=str(level))
         embed.add_field(name="XP", value=f"{xp} / {xp_for_level(level)}")
-        await interaction.response.send_message(embed=embed)
+        await ctx.send(embed=embed)
 
-    @app_commands.command(description="Show the server XP leaderboard.")
-    @app_commands.guild_only()
-    async def leaderboard(self, interaction: discord.Interaction) -> None:
+    @commands.hybrid_command(description="Show the server XP leaderboard.")
+    @commands.guild_only()
+    async def leaderboard(self, ctx: commands.Context) -> None:
+        assert ctx.guild is not None
         async with aiosqlite.connect(config.DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT user_id, level, xp FROM levels WHERE guild_id=? "
                 "ORDER BY level DESC, xp DESC LIMIT 10",
-                (interaction.guild_id,),
+                (ctx.guild.id,),
             )
             rows = await cursor.fetchall()
         if not rows:
-            await interaction.response.send_message(
-                "No XP earned yet — start chatting!", ephemeral=True
-            )
+            await ctx.send("No XP earned yet — start chatting!", ephemeral=True)
             return
         lines = [
             f"**{i}.** <@{uid}> — level {lvl} ({xp} XP)" for i, (uid, lvl, xp) in enumerate(rows, 1)
@@ -112,7 +111,7 @@ class Social(commands.Cog):
         embed = discord.Embed(
             title="🏆 Leaderboard", description="\n".join(lines), color=config.COLOR
         )
-        await interaction.response.send_message(embed=embed)
+        await ctx.send(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:

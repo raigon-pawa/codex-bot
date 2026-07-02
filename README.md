@@ -16,7 +16,7 @@ surfaces, so you can confirm everything works before piling on features:
 
 | Cog            | What it demonstrates                                                        |
 |----------------|-----------------------------------------------------------------------------|
-| `general`      | Slash commands, rich embeds (`/ping`, `/serverinfo`, `/userinfo`, `/help`)  |
+| `general`      | Hybrid commands — `/ping` **and** `!ping` (`serverinfo`, `userinfo`, `help`) |
 | `events`       | Gateway listeners + `members` intent (welcome / goodbye messages)           |
 | `moderation`   | Permission-gated commands (`/kick`, `/ban`, `/timeout`, `/clear`)           |
 | `components`   | Buttons, select menus, modals, **and** user/message context menus           |
