@@ -7,6 +7,8 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Cancel reminders** — `/reminders` now shows a dropdown to cancel a pending
+  reminder (previously you could list them but never remove one).
 - **Configurable welcome/goodbye channel** — `/welcome set|disable|status`
   (Manage Server). Join/leave messages post to the chosen channel, fall back to
   the System Channel by default, and can be turned off. This finally uses the

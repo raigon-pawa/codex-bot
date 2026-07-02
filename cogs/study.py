@@ -52,6 +52,38 @@ class RevealView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
 
+class ReminderCancelView(discord.ui.View):
+    """A dropdown to cancel one of your pending reminders (from /reminders)."""
+
+    def __init__(self, user_id: int, rows: list[tuple[int, float, str]]) -> None:
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.cancel.options = [
+            discord.SelectOption(
+                label=(message or "reminder")[:100],
+                value=str(reminder_id),
+                description=datetime.datetime.fromtimestamp(at, datetime.UTC).strftime(
+                    "%b %d, %H:%M UTC"
+                ),
+            )
+            for reminder_id, at, message in rows[:25]  # Discord caps a select at 25
+        ]
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
+
+    @discord.ui.select(placeholder="Cancel a reminder…")
+    async def cancel(self, interaction: discord.Interaction, select: discord.ui.Select) -> None:
+        reminder_id = int(select.values[0])
+        async with aiosqlite.connect(config.DB_PATH) as db:
+            cursor = await db.execute(
+                "DELETE FROM reminders WHERE id=? AND user_id=?", (reminder_id, self.user_id)
+            )
+            await db.commit()
+        text = "🗑️ Reminder cancelled." if cursor.rowcount else "That reminder is already gone."
+        await interaction.response.edit_message(content=text, embed=None, view=None)
+
+
 class Study(commands.Cog):
     pomodoro = app_commands.Group(name="pomodoro", description="Focus timers.")
     flashcards = app_commands.Group(name="flashcards", description="Personal flashcard decks.")
@@ -135,11 +167,11 @@ class Study(commands.Cog):
             f"⏰ Got it — I'll remind you {discord.utils.format_dt(due, 'R')}: {text}"
         )
 
-    @app_commands.command(description="List your pending reminders.")
+    @app_commands.command(description="List (and cancel) your pending reminders.")
     async def reminders(self, interaction: discord.Interaction) -> None:
         async with aiosqlite.connect(config.DB_PATH) as db:
             cursor = await db.execute(
-                "SELECT remind_at, message FROM reminders WHERE user_id=? ORDER BY remind_at",
+                "SELECT id, remind_at, message FROM reminders WHERE user_id=? ORDER BY remind_at",
                 (interaction.user.id,),
             )
             rows = await cursor.fetchall()
@@ -149,12 +181,14 @@ class Study(commands.Cog):
         lines = [
             f"• {discord.utils.format_dt(datetime.datetime.fromtimestamp(at, datetime.UTC), 'R')}"
             f" — {msg}"
-            for at, msg in rows
+            for _id, at, msg in rows
         ]
         embed = discord.Embed(
             title="⏰ Your reminders", description="\n".join(lines)[:4096], color=config.COLOR
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        embed.set_footer(text="Use the dropdown to cancel one.")
+        view = ReminderCancelView(interaction.user.id, rows)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @tasks.loop(seconds=30)
     async def reminder_loop(self) -> None:
