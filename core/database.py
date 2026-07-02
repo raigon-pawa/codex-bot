@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS levels (
 CREATE TABLE IF NOT EXISTS guild_config (
     guild_id        INTEGER PRIMARY KEY,
     welcome_channel INTEGER,
-    log_channel     INTEGER
+    log_channel     INTEGER,
+    prefix          TEXT
 );
 
 CREATE TABLE IF NOT EXISTS reminders (
@@ -67,4 +68,17 @@ async def init_db() -> None:
         os.makedirs(folder, exist_ok=True)
     async with aiosqlite.connect(config.DB_PATH) as db:
         await db.executescript(SCHEMA)
+        await _apply_migrations(db)
         await db.commit()
+
+
+async def _apply_migrations(db: aiosqlite.Connection) -> None:
+    """Add columns to databases created before those columns existed.
+
+    `CREATE TABLE IF NOT EXISTS` never alters an existing table, so new columns
+    on old tables need an explicit ALTER guarded by a column check.
+    """
+    cursor = await db.execute("PRAGMA table_info(guild_config)")
+    columns = {row[1] for row in await cursor.fetchall()}
+    if "prefix" not in columns:
+        await db.execute("ALTER TABLE guild_config ADD COLUMN prefix TEXT")

@@ -30,6 +30,7 @@ INITIAL_EXTENSIONS = (
     "cogs.music",
     "cogs.premium",
     "cogs.owner",
+    "cogs.settings",
 )
 
 
@@ -45,6 +46,19 @@ class CodexBot(commands.Bot):
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=False),
             activity=discord.Activity(type=discord.ActivityType.listening, name="/help"),
         )
+
+    async def get_prefix(self, message: discord.Message) -> list[str]:
+        """Resolve the prefix per-server, falling back to the default.
+
+        The `settings` cog holds an in-memory prefix cache, so this never hits
+        the database. Mentioning the bot always works too.
+        """
+        prefix = config.PREFIX
+        if message.guild is not None:
+            settings = self.get_cog("Settings")
+            if settings is not None:
+                prefix = settings.prefixes.get(message.guild.id, config.PREFIX)
+        return commands.when_mentioned_or(prefix)(self, message)
 
     async def setup_hook(self) -> None:
         """Runs once after login, before connecting to the gateway."""

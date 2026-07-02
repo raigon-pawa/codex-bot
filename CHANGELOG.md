@@ -32,6 +32,10 @@ All notable changes to Codex are documented here. The format is based on
 - `owner` cog — an owner-only `!sync` prefix command (`!sync` global, `!sync guild`
   for instant per-server updates, `!sync clear` to drop a server's guild commands).
   A prefix command works even before slash commands have synced to a server.
+- `settings` cog — **per-server prefix**: `/prefix show`, `/prefix set` (Manage
+  Server), and `/prefix reset`. The bot resolves each server's prefix from an
+  in-memory cache (no per-message DB hit); mentioning the bot always works too.
+  Adds a `guild_config.prefix` column with a migration for existing databases.
 
 ### Fixed
 - **Music voice crash** — `/music play` failed with `davey library needed in
