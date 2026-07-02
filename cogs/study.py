@@ -208,7 +208,10 @@ class Study(commands.Cog):
 
     @reminder_loop.before_loop
     async def _before_reminders(self) -> None:
-        await self.bot.wait_until_ready()
+        # RuntimeError only fires under tests (the loop starts on cog load but the
+        # bot is never logged in); in production this simply waits for READY.
+        with contextlib.suppress(RuntimeError):
+            await self.bot.wait_until_ready()
 
     # ── Flashcards ────────────────────────────────────────────
     @flashcards.command(name="add", description="Add a flashcard to your deck.")

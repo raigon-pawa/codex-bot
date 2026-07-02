@@ -31,7 +31,9 @@ surfaces, so you can confirm everything works before piling on features:
 | `owner`        | Owner-only prefix commands — `!sync` (global / guild / clear)                |
 | `settings`     | Per-server config — `/prefix` and `/welcome` (channel + on/off)             |
 
-29 slash commands + 2 context menus, all verified to load.
+31 slash commands + 2 context menus, all verified to load. Common info commands
+(`ping`, `help`, `serverinfo`, `userinfo`, `rank`, `leaderboard`) are **hybrid** —
+they work as both `/cmd` and `!cmd`.
 
 ---
 
