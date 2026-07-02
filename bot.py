@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 
@@ -77,6 +78,19 @@ class CodexBot(commands.Bot):
             log.info("Synced %d global commands (up to ~1h to appear the first time)", len(synced))
         except Exception:
             log.exception("Failed to sync application commands")
+
+        self.heartbeat.start()  # touch the health file so Docker can see we're alive
+
+    @tasks.loop(seconds=30)
+    async def heartbeat(self) -> None:
+        """Write a fresh timestamp while connected; healthcheck.py reads its age."""
+        if not self.is_ready():
+            return
+        try:
+            with open(config.HEALTH_FILE, "w") as fh:
+                fh.write(str(int(time.time())))
+        except OSError:
+            log.warning("Could not write health file: %s", config.HEALTH_FILE)
 
     async def on_ready(self) -> None:
         assert self.user is not None

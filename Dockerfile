@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the runtime code (everything else is excluded via .dockerignore).
-COPY bot.py config.py ./
+COPY bot.py config.py healthcheck.py ./
 COPY core/ ./core/
 COPY cogs/ ./cogs/
 
@@ -32,5 +32,9 @@ RUN useradd --create-home --uid 10001 codex \
     && mkdir -p /app/data \
     && chown -R codex:codex /app
 USER codex
+
+# Report "unhealthy" if the bot stops writing its heartbeat (wedged / not connected).
+HEALTHCHECK --interval=60s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["python", "healthcheck.py"]
 
 CMD ["python", "bot.py"]

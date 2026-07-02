@@ -45,6 +45,9 @@ AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", "1024"))
 PREFIX: str = os.getenv("BOT_PREFIX") or os.getenv("PREFIX") or "!"
 OWNER_IDS: set[int] = {int(x) for x in os.getenv("OWNER_IDS", "").split(",") if x.strip()}
 DB_PATH: str = os.getenv("DB_PATH", "data/codex.db")
+# Heartbeat file the bot touches while connected; the Docker healthcheck reads
+# its age. Lives in a writable tmpfs by default (the container root is read-only).
+HEALTH_FILE: str = os.getenv("HEALTH_FILE", "/tmp/codex_healthy")
 # SKU that represents the paid tier (Developer Portal → Monetization). When set,
 # the premium cog gates its perks on an entitlement for this SKU. Find the ID
 # with `/premium skus` after creating the SKU.
