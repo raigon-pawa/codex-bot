@@ -29,6 +29,7 @@ surfaces, so you can confirm everything works before piling on features:
 | `music`        | Voice playback via yt-dlp + FFmpeg (`/music play`, queue, volume, …)         |
 | `premium`      | App Subscriptions — SKU/entitlement-gated perks (`/premium`)                 |
 | `owner`        | Owner-only prefix commands — `!sync` (global / guild / clear)                |
+| `settings`     | Per-server config — `/prefix show \| set \| reset`                            |
 
 29 slash commands + 2 context menus, all verified to load.
 
@@ -231,7 +232,8 @@ codex-bot/
     ├── automod.py      # AutoMod rules + mod-log
     ├── music.py        # voice playback (yt-dlp + FFmpeg)
     ├── premium.py      # App Subscriptions (SKUs + entitlements)
-    └── owner.py        # owner-only !sync command
+    ├── owner.py        # owner-only !sync command
+    └── settings.py     # per-server prefix (/prefix)
 ```
 
 **Adding a feature** = drop a new file in `cogs/`, write a `Cog` subclass with an
