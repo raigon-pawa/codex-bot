@@ -341,6 +341,8 @@ pushing a commit (handy after editing `.env` on the NAS).
 - **No published ports** — outbound-only, as above.
 - **Resource limits** (512 MB RAM, 0.5 CPU) so a bug can't take down the host.
 - **Log rotation** so logs never fill the disk.
+- **Healthcheck** — the bot writes a heartbeat every 30s; `docker ps` shows
+  `unhealthy` if the loop wedges or it never connects (`docker inspect` for detail).
 - The token lives only in `.env` on the host — never in git or the image.
 
 Your XP/levels database persists in the `codex-data` Docker volume across restarts and

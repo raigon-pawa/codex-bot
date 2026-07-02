@@ -7,6 +7,9 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Docker healthcheck** — the bot writes a heartbeat every 30s and a
+  `healthcheck.py` probe reports the container `unhealthy` if it goes stale
+  (wedged loop) or never appears (failed startup). New optional `HEALTH_FILE`.
 - **Ladder position in leveling** — `/rank` now shows your **#position** on the
   server, and `/leaderboard` appends your own rank when you're outside the top 10.
 - **Cancel reminders** — `/reminders` now shows a dropdown to cancel a pending
