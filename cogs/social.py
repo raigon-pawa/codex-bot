@@ -22,6 +22,16 @@ def xp_for_level(level: int) -> int:
     return 5 * level**2 + 50 * level + 100
 
 
+async def rank_position(db: aiosqlite.Connection, guild_id: int, level: int, xp: int) -> int:
+    """1-based ladder position: how many members rank strictly above (level, xp), + 1."""
+    cursor = await db.execute(
+        "SELECT COUNT(*) FROM levels WHERE guild_id=? AND (level > ? OR (level = ? AND xp > ?))",
+        (guild_id, level, level, xp),
+    )
+    row = await cursor.fetchone()
+    return (row[0] if row else 0) + 1
+
+
 class Social(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -84,9 +94,15 @@ class Social(commands.Cog):
                 (ctx.guild.id, member.id),
             )
             row = await cursor.fetchone()
-        xp, level = row if row else (0, 0)
+            if row is not None:
+                xp, level = row
+                position = await rank_position(db, ctx.guild.id, level, xp)
+            else:
+                xp, level, position = 0, 0, None
         embed = discord.Embed(title=f"{member.display_name}'s Rank", color=config.COLOR)
         embed.set_thumbnail(url=member.display_avatar.url)
+        if position is not None:
+            embed.add_field(name="Rank", value=f"#{position}")
         embed.add_field(name="Level", value=str(level))
         embed.add_field(name="XP", value=f"{xp} / {xp_for_level(level)}")
         await ctx.send(embed=embed)
@@ -102,12 +118,26 @@ class Social(commands.Cog):
                 (ctx.guild.id,),
             )
             rows = await cursor.fetchall()
-        if not rows:
-            await ctx.send("No XP earned yet — start chatting!", ephemeral=True)
-            return
-        lines = [
-            f"**{i}.** <@{uid}> — level {lvl} ({xp} XP)" for i, (uid, lvl, xp) in enumerate(rows, 1)
-        ]
+            if not rows:
+                await ctx.send("No XP earned yet — start chatting!", ephemeral=True)
+                return
+            lines = [
+                f"**{i}.** <@{uid}> — level {lvl} ({xp} XP)"
+                for i, (uid, lvl, xp) in enumerate(rows, 1)
+            ]
+            # If the caller isn't in the top 10, show where they stand.
+            if ctx.author.id not in {uid for uid, _, _ in rows}:
+                cursor = await db.execute(
+                    "SELECT level, xp FROM levels WHERE guild_id=? AND user_id=?",
+                    (ctx.guild.id, ctx.author.id),
+                )
+                me = await cursor.fetchone()
+                if me is not None:
+                    position = await rank_position(db, ctx.guild.id, me[0], me[1])
+                    lines.append(
+                        f"\n**{position}.** {ctx.author.mention} — "
+                        f"level {me[0]} ({me[1]} XP) *(you)*"
+                    )
         embed = discord.Embed(
             title="🏆 Leaderboard", description="\n".join(lines), color=config.COLOR
         )

@@ -7,6 +7,8 @@ All notable changes to Codex are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Ladder position in leveling** — `/rank` now shows your **#position** on the
+  server, and `/leaderboard` appends your own rank when you're outside the top 10.
 - **Cancel reminders** — `/reminders` now shows a dropdown to cancel a pending
   reminder (previously you could list them but never remove one).
 - **Configurable welcome/goodbye channel** — `/welcome set|disable|status`
